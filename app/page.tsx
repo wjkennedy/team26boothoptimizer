@@ -45,25 +45,6 @@ export default function Page() {
 
         <EventDetails />
 
-        <a
-          href="https://www.atlassian.com/company/events/team"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-primary px-8 py-4 text-base font-bold text-primary-foreground transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/25 active:scale-100"
-        >
-          <span className="relative z-10">Learn More</span>
-          <svg
-            className="relative z-10 h-4 w-4 transition-transform group-hover:translate-x-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2.5}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-          </svg>
-          <span className="absolute inset-0 bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_100%] opacity-0 transition-opacity group-hover:opacity-100 group-hover:animate-[shimmer_2s_linear_infinite]" />
-        </a>
-
         <p className="text-xs text-muted-foreground/60 tracking-wide">
           May 5, 2026 &middot; Anaheim Convention Center
         </p>
