@@ -42,8 +42,10 @@ export default function BoothOptimizerPage() {
 
   // Update waypointIds when route changes
   useEffect(() => {
-    const ids = route.map((stop) => stop.booth.externalId || stop.booth.id)
-    setWaypointIds(ids)
+    if (route && route.route) {
+      const ids = route.route.map((stop) => stop.booth.externalId || stop.booth.id)
+      setWaypointIds(ids)
+    }
   }, [route])
 
   const handleStrategyChange = (newStrategy: 'serpentine' | 'big-to-small' | 'quest') => {
@@ -116,7 +118,7 @@ export default function BoothOptimizerPage() {
                         Total Booths
                       </span>
                       <span className="font-bold text-foreground">
-                        {route.length}
+                        {route?.totalBooths || 0}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -124,10 +126,7 @@ export default function BoothOptimizerPage() {
                         Distance
                       </span>
                       <span className="font-bold text-foreground">
-                        {route.length > 0
-                          ? route.reduce((sum, r) => sum + r.distanceFromPrevious, 0).toFixed(0)
-                          : '0'}{' '}
-                        m
+                        {route?.totalDistance ? route.totalDistance.toFixed(0) : '0'} m
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -135,13 +134,7 @@ export default function BoothOptimizerPage() {
                         Efficiency
                       </span>
                       <span className="font-bold text-accent">
-                        {route.length > 0
-                          ? (
-                              route.length /
-                              (route.reduce((sum, r) => sum + r.distanceFromPrevious, 0) || 1)
-                            ).toFixed(3)
-                          : '0'}{' '}
-                        booths/m
+                        {route?.efficiency ? route.efficiency.toFixed(3) : '0'} booths/m
                       </span>
                     </div>
                   </div>
