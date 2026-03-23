@@ -5,6 +5,7 @@ export interface Booth {
   x: number
   y: number
   size: 'small' | 'medium' | 'large'
+  externalId?: string
 }
 
 export interface RouteStop {
@@ -75,21 +76,62 @@ export function calculateBigToSmallRoute(booths: Booth[]): RouteResult {
 }
 
 /**
- * Quest-Motivated routing: Prioritizes booths by quest criteria
- * Currently uses vendor alphabetical order as placeholder
+ * Quest-Motivated routing: Follows the optimized quest path
+ * Prioritizes booths in the curated quest order, with nearest-neighbor optimization for unmapped booths
  */
 export function calculateQuestMotivatedRoute(booths: Booth[]): RouteResult {
   if (booths.length === 0) {
     return { route: [], totalDistance: 0, totalBooths: 0, efficiency: 0 }
   }
 
-  // Placeholder: Sort by vendor name (represents quest ordering)
-  const sorted = [...booths].sort((a, b) =>
-    a.vendor.localeCompare(b.vendor)
-  )
+  // Import the quest order
+  const { QUEST_ROUTE_ORDER } = require('@/lib/booth-data')
 
-  // Apply nearest-neighbor optimization
-  const route = greedyNearestNeighbor(sorted)
+  // Create a map of booth ID/name to booth for quick lookup
+  const boothMap = new Map<string, Booth>()
+  booths.forEach((booth) => {
+    boothMap.set(booth.id, booth)
+    boothMap.set(booth.name, booth)
+    boothMap.set(booth.id.replace(/\D/g, ''), booth) // Store numeric ID
+  })
+
+  // Build route following quest order
+  const route: Booth[] = []
+  const used = new Set<string>()
+
+  for (const questBoothId of QUEST_ROUTE_ORDER) {
+    // Try exact match
+    let booth = boothMap.get(questBoothId)
+
+    // Try numeric ID match
+    if (!booth) {
+      const numericId = questBoothId.replace(/\D/g, '')
+      if (numericId) {
+        for (const [key, b] of boothMap.entries()) {
+          if (key.includes(numericId) && !used.has(b.id)) {
+            booth = b
+            break
+          }
+        }
+      }
+    }
+
+    if (booth && !used.has(booth.id)) {
+      route.push(booth)
+      used.add(booth.id)
+    }
+  }
+
+  // Add any remaining booths using nearest-neighbor
+  const remaining = booths.filter((b) => !used.has(b.id))
+  if (remaining.length > 0 && route.length > 0) {
+    const lastBooth = route[route.length - 1]
+    const additionalBooths = greedyNearestNeighbor([lastBooth, ...remaining]).slice(1)
+    route.push(...additionalBooths)
+  } else if (remaining.length > 0) {
+    route.push(...remaining)
+  }
+
   return buildRoute(route)
 }
 
@@ -159,7 +201,7 @@ function buildRoute(orderedBooths: Booth[]): RouteResult {
     totalBooths: orderedBooths.length,
     efficiency:
       orderedBooths.length > 0
-        ? Math.round((orderedBooths.length / totalDistance) * 1000) / 1000
+        ? Math.round((orderedBooths.length / (totalDistance || 1)) * 1000) / 1000
         : 0,
   }
 }
