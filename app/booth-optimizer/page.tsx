@@ -27,12 +27,30 @@ export default function BoothOptimizerPage() {
         const data = await response.json()
         console.log('[v0] Got', data.booths?.length, 'levels from ExpoFP')
         
-        // Transform data
+        // Transform data - only keep Registration and numbered booth IDs
         const boothList: Booth[] = []
         for (const level of data.booths) {
           for (const booth of level.booths) {
-            if (booth.id.includes('Parking') || booth.id.includes('Hotel') || 
-                booth.id.includes('Hall D') || booth.id.includes('Bash')) {
+            // Keep only Registration and booths with numeric IDs (vendor booths)
+            // Skip: Parking, Hotel, Restroom, Hall D, Bash, Arena, etc.
+            const id = booth.id.trim()
+            
+            // Include Registration as the start point
+            if (id === 'Registration') {
+              boothList.push({
+                id,
+                name: 'Event Check-In',
+                vendor: 'Registration',
+                x: (booth.rect[0] + booth.rect[2]) / 2,
+                y: (booth.rect[1] + booth.rect[5]) / 2,
+                size: 'large',
+                externalId: id,
+              })
+              continue
+            }
+            
+            // Include only if ID is a number (vendor booths like 2212, 1720, etc.)
+            if (!/^\d+$/.test(id)) {
               continue
             }
             
@@ -49,13 +67,13 @@ export default function BoothOptimizerPage() {
             else size = 'small'
             
             boothList.push({
-              id: booth.id,
-              name: `Booth ${booth.id}`,
+              id,
+              name: `Booth ${id}`,
               vendor: '',
               x,
               y,
               size,
-              externalId: booth.id,
+              externalId: id,
             })
           }
         }
