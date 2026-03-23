@@ -74,7 +74,6 @@ export async function getBoothsFromExpoFP(): Promise<Booth[]> {
     return transformExpoFPData(data)
   } catch (error) {
     console.error('[v0] Failed to fetch booths from ExpoFP:', error)
-    // Return mock data as fallback
     return getMockBooths()
   }
 }
@@ -87,8 +86,6 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
   const booths: Booth[] = []
 
   for (const level of data.booths) {
-    const levelName = level.level.name
-
     for (const booth of level.booths) {
       // Skip parking and hotel entries - focus on numbered booths
       if (
@@ -118,7 +115,7 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
       booths.push({
         id: booth.id,
         name: `Booth ${booth.id}`,
-        vendor: '', // Not available in this data
+        vendor: '',
         x,
         y,
         size,
@@ -137,248 +134,14 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
 export function getMockBooths(): Booth[] {
   console.log('[v0] Using mock booth data (fallback)')
   return [
-    {
-      id: '2212',
-      name: 'Booth 2212/2213',
-      vendor: 'Sample Vendor',
-      x: 100,
-      y: 100,
-      size: 'large',
-    },
-    {
-      id: '2216',
-      name: 'Booth 2216/2217',
-      vendor: 'Sample Vendor',
-      x: 150,
-      y: 100,
-      size: 'large',
-    },
-    {
-      id: '2220',
-      name: 'Booth 2220',
-      vendor: 'Sample Vendor',
-      x: 200,
-      y: 100,
-      size: 'medium',
-    },
-    {
-      id: '1720',
-      name: 'Booth 1720',
-      vendor: 'Sample Vendor',
-      x: 100,
-      y: 200,
-      size: 'large',
-    },
-    {
-      id: '1722',
-      name: 'Booth 1722',
-      vendor: 'Sample Vendor',
-      x: 150,
-      y: 200,
-      size: 'medium',
-    },
-    {
-      id: '1726',
-      name: 'Booth 1726',
-      vendor: 'Sample Vendor',
-      x: 200,
-      y: 200,
-      size: 'medium',
-    },
-    {
-      id: '2272',
-      name: 'Booth 2272',
-      vendor: 'Sample Vendor',
-      x: 100,
-      y: 300,
-      size: 'small',
-    },
-    {
-      id: '2339',
-      name: 'Booth 2339',
-      vendor: 'Sample Vendor',
-      x: 150,
-      y: 300,
-      size: 'small',
-    },
-    {
-      id: '2345',
-      name: 'Booth 2345',
-      vendor: 'Sample Vendor',
-      x: 200,
-      y: 300,
-      size: 'medium',
-    },
-  ]
-}
-
-    const eventData = await response.json()
-    return transformExpoFPData(eventData)
-  } catch (error) {
-    console.error('[v0] Failed to fetch booths from ExpoFP:', error)
-    // Return mock data as fallback
-    return getMockBooths()
-  }
-}
-
-/**
- * Fetch booths using the client-side ExpoFP FloorPlan API
- * This is called from client components after ExpoFP is loaded
- */
-export function getBoothsFromExpoFPClient(): Promise<Booth[]> {
-  return new Promise((resolve) => {
-    // Wait for ExpoFP to be available on window
-    const checkExpoFP = setInterval(() => {
-      if (typeof window !== 'undefined' && (window as any).ExpoFP) {
-        clearInterval(checkExpoFP)
-        
-        // Get booths from the FloorPlan instance
-        // This will be set by the wayfinding component
-        const floorPlan = (window as any).__team26FloorPlan
-        if (floorPlan) {
-          const booths = floorPlan.boothsList()
-          resolve(transformFloorPlanBooths(booths))
-        } else {
-          // Fallback to mock data
-          resolve(getMockBooths())
-        }
-      }
-    }, 100)
-
-    // Timeout after 5 seconds
-    setTimeout(() => {
-      clearInterval(checkExpoFP)
-      resolve(getMockBooths())
-    }, 5000)
-  })
-}
-
-/**
- * Transform ExpoFP FloorPlanBooth to our Booth interface
- */
-function transformFloorPlanBooths(floorPlanBooths: any[]): Booth[] {
-  return floorPlanBooths.map((fpBooth: any) => ({
-    id: fpBooth.externalId || fpBooth.name,
-    name: fpBooth.name,
-    vendor: fpBooth.description || '',
-    x: fpBooth.entity?.point?.x || 0,
-    y: fpBooth.entity?.point?.y || 0,
-    size: determineBoothSize(fpBooth),
-    externalId: fpBooth.externalId,
-  }))
-}
-
-/**
- * Transform ExpoFP API JSON response to our Booth interface
- */
-function transformExpoFPData(eventData: any): Booth[] {
-  if (!eventData.booths || !Array.isArray(eventData.booths)) {
-    return getMockBooths()
-  }
-
-  return eventData.booths.map((booth: any) => ({
-    id: booth.externalId || booth.name,
-    name: booth.name,
-    vendor: booth.description || '',
-    x: booth.entity?.point?.x || 0,
-    y: booth.entity?.point?.y || 0,
-    size: determineBoothSize(booth),
-    externalId: booth.externalId,
-  }))
-}
-
-/**
- * Determine booth size category based on area or metadata
- */
-function determineBoothSize(booth: any): 'small' | 'medium' | 'large' {
-  // If booth has area info, use that
-  if (booth.entity?.point) {
-    const area = (booth.entity.point.w || 0) * (booth.entity.point.h || 0)
-    if (area > 500) return 'large'
-    if (area > 200) return 'medium'
-    return 'small'
-  }
-
-  // Default to medium
-  return 'medium'
-}
-
-/**
- * Get mock booths as fallback
- */
-export function getMockBooths(): Booth[] {
-  return [
-    {
-      id: '2212',
-      name: 'Booth 2212/2213',
-      vendor: 'Sample Vendor',
-      x: 100,
-      y: 100,
-      size: 'large',
-    },
-    {
-      id: '2216',
-      name: 'Booth 2216/2217',
-      vendor: 'Sample Vendor',
-      x: 150,
-      y: 100,
-      size: 'large',
-    },
-    {
-      id: '2220',
-      name: 'Booth 2220',
-      vendor: 'Sample Vendor',
-      x: 200,
-      y: 100,
-      size: 'medium',
-    },
-    {
-      id: '1720',
-      name: 'Booth 1720',
-      vendor: 'Sample Vendor',
-      x: 100,
-      y: 200,
-      size: 'large',
-    },
-    {
-      id: '1722',
-      name: 'Booth 1722',
-      vendor: 'Sample Vendor',
-      x: 150,
-      y: 200,
-      size: 'medium',
-    },
-    {
-      id: '1726',
-      name: 'Booth 1726',
-      vendor: 'Sample Vendor',
-      x: 200,
-      y: 200,
-      size: 'medium',
-    },
-    {
-      id: '2272',
-      name: 'Booth 2272',
-      vendor: 'Sample Vendor',
-      x: 100,
-      y: 300,
-      size: 'small',
-    },
-    {
-      id: '2339',
-      name: 'Booth 2339',
-      vendor: 'Sample Vendor',
-      x: 150,
-      y: 300,
-      size: 'small',
-    },
-    {
-      id: '2345',
-      name: 'Booth 2345',
-      vendor: 'Sample Vendor',
-      x: 200,
-      y: 300,
-      size: 'medium',
-    },
+    { id: '2212', name: 'Booth 2212/2213', vendor: 'Sample Vendor', x: 100, y: 100, size: 'large' },
+    { id: '2216', name: 'Booth 2216/2217', vendor: 'Sample Vendor', x: 150, y: 100, size: 'large' },
+    { id: '2220', name: 'Booth 2220', vendor: 'Sample Vendor', x: 200, y: 100, size: 'medium' },
+    { id: '1720', name: 'Booth 1720', vendor: 'Sample Vendor', x: 100, y: 200, size: 'large' },
+    { id: '1722', name: 'Booth 1722', vendor: 'Sample Vendor', x: 150, y: 200, size: 'medium' },
+    { id: '1726', name: 'Booth 1726', vendor: 'Sample Vendor', x: 200, y: 200, size: 'medium' },
+    { id: '2272', name: 'Booth 2272', vendor: 'Sample Vendor', x: 100, y: 300, size: 'small' },
+    { id: '2339', name: 'Booth 2339', vendor: 'Sample Vendor', x: 150, y: 300, size: 'small' },
+    { id: '2345', name: 'Booth 2345', vendor: 'Sample Vendor', x: 200, y: 300, size: 'medium' },
   ]
 }
