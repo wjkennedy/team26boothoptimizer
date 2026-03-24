@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ExpoFPWayfindingProps {
   waypointIds?: string[]
@@ -13,6 +13,8 @@ export function ExpoFPWayfinding({
 }: ExpoFPWayfindingProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const floorPlanRef = useRef<any>(null)
+  const [isReady, setIsReady] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Load ExpoFP script and initialize wayfinding
   useEffect(() => {
@@ -20,6 +22,7 @@ export function ExpoFPWayfinding({
 
     // Check if ExpoFP already loaded
     if ((window as any).ExpoFP) {
+      setIsReady(true)
       initializeFloorPlan()
     } else {
       // Load ExpoFP script
@@ -28,10 +31,14 @@ export function ExpoFPWayfinding({
       script.async = true
       script.onload = () => {
         console.log('[v0] ExpoFP script loaded')
+        setIsReady(true)
+        setError(null)
         initializeFloorPlan()
       }
       script.onerror = () => {
         console.error('[v0] Failed to load ExpoFP script')
+        setError('Unable to load floor plan. Please check your connection.')
+        setIsReady(false)
       }
       document.body.appendChild(script)
     }
@@ -62,6 +69,7 @@ export function ExpoFPWayfinding({
       }
     } catch (error) {
       console.error('[v0] Failed to initialize ExpoFP:', error)
+      setError('Failed to initialize floor plan. Visit ExpoFP site directly.')
     }
   }
 
@@ -94,11 +102,26 @@ export function ExpoFPWayfinding({
         style={{ minHeight: '600px' }}
       />
       <div className="text-xs text-muted-foreground text-center p-2">
-        <p>
-          {waypointIds.length > 0
-            ? `Optimized route for ${waypointIds.length} booths`
-            : 'Interactive floor plan with wayfinding'}
-        </p>
+        {error ? (
+          <div className="text-destructive">
+            <p>{error}</p>
+            <p className="text-xs mt-1">
+              Embed at{' '}
+              <code className="bg-background px-1">team26.expofp.com/wayfinding</code>
+            </p>
+          </div>
+        ) : (
+          <>
+            <p>
+              {waypointIds.length > 0
+                ? `Optimized route for ${waypointIds.length} booths`
+                : 'Interactive floor plan with wayfinding'}
+            </p>
+            {!isReady && (
+              <p className="text-xs mt-1">Loading floor plan...</p>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
