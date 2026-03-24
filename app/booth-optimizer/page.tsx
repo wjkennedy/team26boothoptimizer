@@ -16,7 +16,7 @@ export default function BoothOptimizerPage() {
   const { strategy, route, calculateRoute, initializeRoute } =
     useRouteCalculator({ booths })
 
-  // Fetch booths on mount
+  // Fetch booths on mount - filters for vendor booths only
   useEffect(() => {
     const fetchBooths = async () => {
       try {
