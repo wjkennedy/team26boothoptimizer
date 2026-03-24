@@ -1,112 +1,154 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
+import { Booth } from '@/lib/distance-utils'
 
 interface ExpoFPWayfindingProps {
+  booths?: Booth[]
   waypointIds?: string[]
   autoRoute?: boolean
 }
 
+const CANVAS_W = 900
+const CANVAS_H = 600
+const PAD = 40
+
 export function ExpoFPWayfinding({
+  booths = [],
   waypointIds = [],
-  autoRoute = true,
 }: ExpoFPWayfindingProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const floorPlanRef = useRef<any>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  // Load ExpoFP script and initialize wayfinding
+  // Derive scale from booth coordinates
+  const scale = useMemo(() => {
+    if (booths.length === 0) return { x: 1, y: 1, offX: 0, offY: 0 }
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+    booths.forEach(b => {
+      if (b.x < minX) minX = b.x
+      if (b.x > maxX) maxX = b.x
+      if (b.y < minY) minY = b.y
+      if (b.y > maxY) maxY = b.y
+    })
+    const rangeX = maxX - minX || 1
+    const rangeY = maxY - minY || 1
+    return {
+      x: (CANVAS_W - PAD * 2) / rangeX,
+      y: (CANVAS_H - PAD * 2) / rangeY,
+      offX: PAD - minX,
+      offY: PAD - minY,
+    }
+  }, [booths])
+
+  const toCanvas = (bx: number, by: number) => ({
+    cx: (bx + scale.offX) * scale.x,
+    cy: (by + scale.offY) * scale.y,
+  })
+
   useEffect(() => {
-    if (!containerRef.current) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-    // Check if ExpoFP already loaded
-    if ((window as any).ExpoFP) {
-      initializeFloorPlan()
-    } else {
-      // Load ExpoFP script
-      const script = document.createElement('script')
-      script.src = 'https://www.expofp.com/build/expofp-js-api.js'
-      script.async = true
-      script.onload = () => {
-        console.log('[v0] ExpoFP script loaded')
-        initializeFloorPlan()
+    // ── Background ──────────────────────────────────────────────
+    ctx.fillStyle = '#f5f5f4'
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
+
+    const boothMap = new Map(booths.map(b => [b.id, b]))
+    const routeSet = new Set(waypointIds)
+
+    // ── All booths (background dots) ────────────────────────────
+    booths.forEach(b => {
+      const { cx, cy } = toCanvas(b.x, b.y)
+      const r = b.size === 'large' ? 10 : b.size === 'medium' ? 7 : 4
+
+      // Circle
+      ctx.fillStyle = routeSet.has(b.id) ? '#dbeafe' : '#e7e5e4'
+      ctx.strokeStyle = routeSet.has(b.id) ? '#93c5fd' : '#d4d0cc'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+
+      // Booth ID below circle
+      ctx.fillStyle = '#78716c'
+      ctx.font = 'bold 8px ui-sans-serif, system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+      ctx.fillText(b.id, cx, cy + r + 2)
+
+      // Vendor name or placeholder
+      const vendorLabel = b.vendor || 'TBD'
+      const maxW = 52
+      let label = vendorLabel
+      ctx.font = '7px ui-sans-serif, system-ui, sans-serif'
+      if (ctx.measureText(vendorLabel).width > maxW) {
+        label = vendorLabel.slice(0, 10) + '\u2026'
       }
-      script.onerror = () => {
-        console.error('[v0] Failed to load ExpoFP script')
+      ctx.fillStyle = b.vendor ? '#a8a29e' : '#d6d3d1'
+      ctx.fillText(label, cx, cy + r + 12)
+    })
+
+    // ── Route path (dotted line) ─────────────────────────────────
+    if (waypointIds.length > 1) {
+      ctx.strokeStyle = '#2563eb'
+      ctx.lineWidth = 2
+      ctx.setLineDash([6, 5])
+      ctx.lineJoin = 'round'
+      ctx.beginPath()
+      let first = true
+      for (const id of waypointIds) {
+        const b = boothMap.get(id)
+        if (!b) continue
+        const { cx, cy } = toCanvas(b.x, b.y)
+        if (first) { ctx.moveTo(cx, cy); first = false } else ctx.lineTo(cx, cy)
       }
-      document.body.appendChild(script)
+      ctx.stroke()
+      ctx.setLineDash([])
     }
 
-    return () => {
-      // Cleanup if needed
-    }
-  }, [])
+    // ── Waypoint numbered badges ─────────────────────────────────
+    waypointIds.forEach((id, idx) => {
+      const b = boothMap.get(id)
+      if (!b) return
+      const { cx, cy } = toCanvas(b.x, b.y)
+      const badge = 9
 
-  const initializeFloorPlan = () => {
-    if (!containerRef.current) return
-    if (!(window as any).ExpoFP) return
+      ctx.fillStyle = '#1d4ed8'
+      ctx.beginPath()
+      ctx.arc(cx, cy, badge, 0, Math.PI * 2)
+      ctx.fill()
 
-    try {
-      console.log('[v0] Initializing ExpoFP FloorPlan for Team 26')
+      ctx.fillStyle = '#ffffff'
+      ctx.font = `bold ${idx + 1 > 9 ? 7 : 8}px ui-sans-serif, system-ui, sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(String(idx + 1), cx, cy)
+    })
 
-      const floorPlan = new (window as any).ExpoFP.FloorPlan({
-        element: containerRef.current,
-        eventId: 'team26',
-      })
-
-      floorPlanRef.current = floorPlan
-      ;(window as any).__team26FloorPlan = floorPlan
-
-      // Initialize route if waypointIds provided
-      if (waypointIds.length > 0) {
-        setupRoute(floorPlan, waypointIds)
-      }
-    } catch (error) {
-      console.error('[v0] Failed to initialize ExpoFP:', error)
-    }
-  }
-
-  const setupRoute = (floorPlan: any, ids: string[]) => {
-    try {
-      if (!ids || ids.length === 0) return
-
-      console.log('[v0] Setting up ExpoFP route with', ids.length, 'waypoints')
-
-      // ExpoFP selectRoute expects array of POI IDs
-      // It will automatically calculate the optimal route with flowing lines
-      floorPlan.selectRoute(ids.slice(0, 10))
-    } catch (error) {
-      console.error('[v0] Error setting up route:', error)
-    }
-  }
-
-  // Update route when waypointIds change
-  useEffect(() => {
-    if (floorPlanRef.current && waypointIds.length > 0) {
-      setupRoute(floorPlanRef.current, waypointIds)
-    }
-  }, [waypointIds])
+    // ── Border ───────────────────────────────────────────────────
+    ctx.strokeStyle = '#e7e5e4'
+    ctx.lineWidth = 1
+    ctx.strokeRect(0.5, 0.5, CANVAS_W - 1, CANVAS_H - 1)
+  }, [booths, waypointIds, scale])
 
   return (
-    <div className="w-full space-y-4">
-      <div
-        ref={containerRef}
-        className="w-full h-[600px] rounded-lg border border-border overflow-hidden bg-card"
-        style={{ minHeight: '600px' }}
-      />
-      <div className="text-xs text-muted-foreground text-center p-2">
-        <p>
-          {waypointIds.length > 0
-            ? `Optimized route for ${waypointIds.length} booths`
-            : 'Interactive floor plan with wayfinding'}
-        </p>
+    <div className="w-full space-y-2">
+      <div className="w-full rounded-lg border border-border overflow-hidden bg-card">
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_W}
+          height={CANVAS_H}
+          className="w-full"
+          aria-label="Booth route map"
+        />
       </div>
+      <p className="text-xs text-muted-foreground text-center">
+        {waypointIds.length > 0
+          ? `${waypointIds.length} booths in route — numbered in visit order`
+          : 'Route will appear once booths are loaded'}
+      </p>
     </div>
   )
-}
-
-declare global {
-  interface Window {
-    ExpoFP?: any
-    __team26FloorPlan?: any
-  }
 }
