@@ -240,7 +240,7 @@ export default function BoothOptimizerPage() {
           <>
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">Interactive Floor Plan</h2>
-              <ExpoFPWayfinding waypointIds={waypointIds} autoRoute={true} />
+              <ExpoFPWayfinding booths={booths} waypointIds={waypointIds} />
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
