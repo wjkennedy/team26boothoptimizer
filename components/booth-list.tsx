@@ -32,26 +32,12 @@ export function BoothList({ route, isLoading = false }: BoothListProps) {
   return (
     <div className="space-y-4">
       {/* Stats Summary */}
-      <div className="grid grid-cols-3 gap-4 p-4 bg-card rounded-lg border border-border">
+      <div className="p-4 bg-card rounded-lg border border-border">
         <div className="text-center">
-          <div className="text-2xl font-bold text-primary">
+          <div className="text-3xl font-bold text-primary">
             {route.totalBooths}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">Booths</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-secondary">
-            {route.totalDistance}m
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">Total Distance</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-accent">
-            {route.efficiency}
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            Booths per Meter
-          </div>
+          <div className="text-sm text-muted-foreground mt-2">Booths in Route</div>
         </div>
       </div>
 
@@ -69,15 +55,16 @@ export function BoothList({ route, isLoading = false }: BoothListProps) {
                   {stop.position}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-foreground truncate">
-                    {stop.booth.name}
+                  <div className="font-semibold text-foreground">
+                    Booth {stop.booth.id}
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {stop.booth.vendor}
-                  </div>
-                  {stop.distanceFromPrevious > 0 && (
-                    <div className="text-xs text-accent mt-1">
-                      +{stop.distanceFromPrevious.toFixed(1)}m from previous
+                  {stop.booth.vendor ? (
+                    <div className="text-sm text-muted-foreground">
+                      {stop.booth.vendor}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">
+                      Vendor details coming soon
                     </div>
                   )}
                 </div>

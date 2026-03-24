@@ -139,14 +139,6 @@ export default function BoothOptimizerPage() {
                       <span className="text-xs text-muted-foreground">Total Booths</span>
                       <span className="font-bold text-foreground">{route?.totalBooths || 0}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Distance</span>
-                      <span className="font-bold text-foreground">{route?.totalDistance ? route.totalDistance.toFixed(0) : '0'} m</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Efficiency</span>
-                      <span className="font-bold text-accent">{route?.efficiency ? route.efficiency.toFixed(3) : '0'} booths/m</span>
-                    </div>
                   </div>
                 </div>
               </div>

@@ -67,24 +67,30 @@ export function ExpoFPWayfinding({
       const x = (booth.x + scale.offsetX) * scale.x
       const y = (booth.y + scale.offsetY) * scale.y
       
-      // Booth ID label below the circle
+      // Booth ID label (bold)
       ctx.fillStyle = '#78716c'
-      ctx.font = '9px sans-serif'
+      ctx.font = 'bold 9px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
       ctx.fillText(booth.id, x, y + 16)
       
-      // Vendor name label (if available) or placeholder
-      if (booth.vendor) {
-        ctx.fillStyle = '#a8a39d'
-        ctx.font = '8px italic sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'top'
-        ctx.fillText(booth.vendor, x, y + 26)
+      // Vendor name or placeholder (with text wrapping if needed)
+      ctx.fillStyle = booth.vendor ? '#a8a39d' : '#d6ccc2'
+      ctx.font = '8px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+      
+      const vendorText = booth.vendor || 'TBD'
+      const maxWidth = 40
+      let displayText = vendorText
+      
+      if (ctx.measureText(vendorText).width > maxWidth) {
+        displayText = vendorText.substring(0, 12) + '...'
       }
+      ctx.fillText(displayText, x, y + 26)
     })
 
-    // Draw route
+    // Draw route path and waypoints
     if (waypointIds.length > 0) {
       const boothMap = new Map(booths.map(b => [b.id, b]))
 
@@ -110,7 +116,7 @@ export function ExpoFPWayfinding({
       ctx.stroke()
       ctx.setLineDash([])
 
-      // Draw waypoints with numbers
+      // Draw route waypoints with stop numbers
       waypointIds.forEach((id, idx) => {
         const booth = boothMap.get(id)
         if (booth) {
@@ -136,6 +142,18 @@ export function ExpoFPWayfinding({
     ctx.lineWidth = 1
     ctx.strokeRect(0, 0, 800, 600)
   }, [booths, waypointIds, scale])
+
+  // Trigger ExpoFP selectRoute when waypoints change
+  useEffect(() => {
+    if (waypointIds.length > 0 && (window as any).___fp) {
+      try {
+        console.log('[v0] Calling ExpoFP selectRoute with', waypointIds.length, 'waypoints')
+        ;(window as any).___fp.selectRoute(waypointIds.slice(0, 8))
+      } catch (error) {
+        console.error('[v0] ExpoFP selectRoute error:', error)
+      }
+    }
+  }, [waypointIds])
 
   return (
     <div className="w-full space-y-4">
