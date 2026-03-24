@@ -7,6 +7,9 @@ import { ExpoFPWayfinding } from '@/components/expofp-wayfinding'
 import { useRouteCalculator } from '@/hooks/use-route-calculator'
 import { getMockBooths } from '@/lib/booth-data'
 import { Booth } from '@/lib/distance-utils'
+import { MarketplaceBrowser } from '@/components/marketplace-browser'
+
+type ActiveTab = 'route' | 'vendors'
 
 export default function BoothOptimizerPage() {
   const [booths, setBooths] = useState<Booth[]>([])
@@ -15,6 +18,7 @@ export default function BoothOptimizerPage() {
   const [showInfo, setShowInfo] = useState(false)
   const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null)
   const [offlineUrl, setOfflineUrl] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<ActiveTab>('route')
 
   const { strategy, route, calculateRoute, initializeRoute } = useRouteCalculator({ booths })
 
@@ -112,13 +116,13 @@ export default function BoothOptimizerPage() {
   return (
     <main className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        <div className="mb-8 flex items-start justify-between">
+        <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
+            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-1">
               Team '26 Booth Optimizer
             </h1>
-            <p className="text-muted-foreground">
-              Find the most efficient route through all booths. Select a strategy and see your optimized path.
+            <p className="text-muted-foreground text-sm">
+              Find the most efficient route through all booths, or browse vendors by app.
             </p>
           </div>
           <button
@@ -131,6 +135,26 @@ export default function BoothOptimizerPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
+        </div>
+
+        {/* Tab bar */}
+        <div className="flex items-center gap-1 p-1 bg-muted rounded-lg w-fit mb-6">
+          {([
+            { id: 'route', label: 'Route Optimizer' },
+            { id: 'vendors', label: 'Browse Vendors' },
+          ] as { id: ActiveTab; label: string }[]).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Info Modal */}
@@ -268,6 +292,16 @@ export default function BoothOptimizerPage() {
               <p className="text-sm text-muted-foreground">Loading booths...</p>
             </div>
           </div>
+        ) : activeTab === 'vendors' ? (
+          <MarketplaceBrowser
+            booths={booths}
+            waypointIds={waypointIds}
+            onAddBooth={(boothId) => {
+              if (!waypointIds.includes(boothId)) {
+                setWaypointIds(prev => [...prev, boothId])
+              }
+            }}
+          />
         ) : (
           <>
             <div>

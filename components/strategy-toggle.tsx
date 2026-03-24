@@ -7,76 +7,89 @@ interface StrategyToggleProps {
   onStrategyChange: (strategy: StrategyType) => void
 }
 
-const strategies: { id: StrategyType; label: string; description: string; badge?: string }[] =
-  [
-    {
-      id: 'serpentine',
-      label: 'Serpentine',
-      description: 'Row-by-row sweeping motion',
-    },
-    {
-      id: 'big-to-small',
-      label: 'Big to Small',
-      description: 'Swag-motivated (largest booths first)',
-    },
-    {
-      id: 'expofp',
-      label: 'ExpoFP Optimized',
-      description: 'TSP heuristic matching getOptimizedRoutes()',
-      badge: 'new',
-    },
-    {
-      id: 'quest',
-      label: 'Quest Mode',
-      description: 'Atlassian quest sequence',
-      badge: 'soon',
-    },
-  ]
+const strategies: {
+  id: StrategyType
+  label: string
+  shortLabel: string
+  description: string
+  badge?: string
+  disabled?: boolean
+}[] = [
+  {
+    id: 'serpentine',
+    label: 'Serpentine',
+    shortLabel: 'Serpentine',
+    description: 'Row-by-row sweep, alternating direction. Minimises backtracking across the whole floor.',
+  },
+  {
+    id: 'big-to-small',
+    label: 'Big to Small',
+    shortLabel: 'Big → Small',
+    description: 'Prioritises large booths first, then fills in smaller ones. Good for maximising high-value stops early.',
+  },
+  {
+    id: 'expofp',
+    label: 'ExpoFP Optimized',
+    shortLabel: 'ExpoFP TSP',
+    description: 'Mirrors getOptimizedRoutes() — tries nearest-neighbor from every start point, picks the shortest total path.',
+    badge: 'new',
+  },
+  {
+    id: 'quest',
+    label: 'Quest Mode',
+    shortLabel: 'Quest',
+    description: 'A curated sequence designated by Atlassian. Complete it to claim a Team t-shirt.',
+    badge: 'soon',
+    disabled: true,
+  },
+]
 
 export function StrategyToggle({
   activeStrategy,
   onStrategyChange,
 }: StrategyToggleProps) {
+  const active = strategies.find(s => s.id === activeStrategy)
+
   return (
-    <div className="w-full">
-      <h2 className="text-lg font-semibold text-foreground mb-4">
-        Routing Strategy
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {strategies.map((strategy) => (
+    <div className="w-full space-y-3">
+      <h2 className="text-lg font-semibold text-foreground">Routing Strategy</h2>
+
+      {/* Compact pill bar */}
+      <div className="flex items-center gap-1 p-1 bg-muted rounded-lg flex-wrap">
+        {strategies.map((s) => (
           <button
-            key={strategy.id}
-            onClick={() => onStrategyChange(strategy.id)}
-            disabled={strategy.id === 'quest'}
-            className={`relative p-4 rounded-lg border-2 transition-all text-left ${
-              activeStrategy === strategy.id
-                ? 'border-primary bg-primary/10 shadow-lg'
-                : strategy.id === 'quest'
-                  ? 'border-border bg-card opacity-50 cursor-not-allowed'
-                  : 'border-border bg-card hover:border-primary/50'
+            key={s.id}
+            onClick={() => !s.disabled && onStrategyChange(s.id)}
+            disabled={s.disabled}
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+              activeStrategy === s.id
+                ? 'bg-card text-foreground shadow-sm'
+                : s.disabled
+                  ? 'text-muted-foreground/50 cursor-not-allowed'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
             }`}
           >
-            <div className="flex items-start justify-between gap-1 mb-1">
-              <div className="font-semibold text-foreground text-sm leading-tight">{strategy.label}</div>
-              {strategy.badge && (
-                <span className={`flex-shrink-0 text-xs font-medium px-1.5 py-0.5 rounded ${
-                  strategy.badge === 'new'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-muted text-muted-foreground'
-                }`}>
-                  {strategy.badge}
-                </span>
-              )}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {strategy.description}
-            </div>
-            {activeStrategy === strategy.id && (
-              <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
+            {s.shortLabel}
+            {s.badge && (
+              <span className={`text-[10px] font-semibold px-1 py-0.5 rounded leading-none ${
+                s.badge === 'new'
+                  ? 'bg-primary/20 text-primary'
+                  : 'bg-muted-foreground/20 text-muted-foreground'
+              }`}>
+                {s.badge}
+              </span>
             )}
           </button>
         ))}
       </div>
+
+      {/* Description for active strategy */}
+      {active && (
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          <span className="font-medium text-foreground">{active.label}: </span>
+          {active.description}
+        </p>
+      )}
     </div>
   )
 }
