@@ -13,8 +13,20 @@ export default function BoothOptimizerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [waypointIds, setWaypointIds] = useState<string[]>([])
   const [showInfo, setShowInfo] = useState(false)
+  const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null)
+  const [offlineUrl, setOfflineUrl] = useState<string | null>(null)
 
   const { strategy, route, calculateRoute, initializeRoute } = useRouteCalculator({ booths })
+
+  useEffect(() => {
+    // Fetch offline archive URL so users can download the full floor plan for offline use
+    fetch('https://app.expofp.com/api/v2/expo-offline/team26/get/latest')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.fileUrl) setOfflineUrl(data.fileUrl)
+      })
+      .catch(() => {/* offline API is optional */})
+  }, [])
 
   useEffect(() => {
     const fetchBooths = async () => {
@@ -137,93 +149,113 @@ export default function BoothOptimizerPage() {
                 </button>
               </div>
 
-              <div className="px-6 py-6 space-y-6">
+              <div className="px-6 py-6 space-y-6 text-sm">
+
+                {/* Data Sources */}
                 <section>
-                  <h3 className="text-lg font-semibold text-foreground mb-3">Data Sources</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="font-medium text-foreground">ExpoFP Booth API</p>
-                      <p className="text-sm text-muted-foreground">
-                        We fetch real-time booth locations, dimensions, and layout data from your ExpoFP event floor plan. This gives us accurate coordinates for distance calculations and wayfinding.
+                  <h3 className="text-base font-semibold text-foreground mb-3">Data Sources</h3>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-background rounded-lg border border-border">
+                      <p className="font-medium text-foreground mb-1">ExpoFP Public Data API</p>
+                      <p className="text-muted-foreground mb-2">
+                        Booth coordinates, dimensions, and layout are fetched from the Team 26 event's public JSON endpoint. Each booth rect is an 8-value polygon; we derive the center and area to classify size.
                       </p>
-                      <code className="text-xs bg-background p-1 rounded mt-1 block">
-                        https://team26.expofp.com/data/booths.json
+                      <code className="text-xs block bg-card px-2 py-1 rounded border border-border">
+                        GET https://team26.expofp.com/data/booths.json
                       </code>
                     </div>
-                    <div>
-                      <p className="font-medium text-foreground">Atlassian Marketplace API</p>
-                      <p className="text-sm text-muted-foreground">
-                        Ready to integrate vendor names, logos, and app details. The API returns company information by booth ID, enriching your route with vendor context.
+                    <div className="p-3 bg-background rounded-lg border border-border">
+                      <p className="font-medium text-foreground mb-1">Atlassian Marketplace REST API v3</p>
+                      <p className="text-muted-foreground mb-2">
+                        Vendor names, app summaries, and logos will be joined to booth data by product or developer ID. The integration is wired and ready — we need the booth-to-product mapping to activate it.
                       </p>
-                      <code className="text-xs bg-background p-1 rounded mt-1 block">
-                        REST API v3 • Marketplace app-listing endpoints
+                      <code className="text-xs block bg-card px-2 py-1 rounded border border-border">
+                        GET /marketplace/rest/3/product-listing/developer-space/{'{developerId}'}
                       </code>
                     </div>
                   </div>
                 </section>
 
+                {/* ExpoFP JS SDK */}
                 <section>
-                  <h3 className="text-lg font-semibold text-foreground mb-3">Wayfinding Technology</h3>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    We use ExpoFP's Wayfinding API to render interactive routes with animated flowing lines directly on your floor plan.
+                  <h3 className="text-base font-semibold text-foreground mb-3">ExpoFP JavaScript SDK</h3>
+                  <p className="text-muted-foreground mb-3">
+                    The SDK is embedded from the event domain and initialized with <code className="bg-background px-1 rounded">new ExpoFP.FloorPlan()</code>. The following methods are available for our use case:
                   </p>
-                  <ul className="text-sm text-muted-foreground space-y-2">
-                    <li className="flex gap-2">
-                      <span className="font-medium text-foreground flex-shrink-0">selectRoute():</span>
-                      <span>Calculates optimal path between selected POIs and renders visualization</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-medium text-foreground flex-shrink-0">Live Updates:</span>
-                      <span>Route recomputes instantly when you switch optimization strategies</span>
-                    </li>
+                  <div className="space-y-2">
+                    {[
+                      { method: 'selectRoute(waypoints[])', status: 'ready', note: 'Renders the animated route on the real floor plan. Max 10 waypoints.' },
+                      { method: 'getOptimizedRoutes(waypoints[])', status: 'opportunity', note: 'ExpoFP\'s own TSP-style optimizer — could replace our manual strategies.' },
+                      { method: 'boothsList() / exhibitorsList()', status: 'opportunity', note: 'Pull richer exhibitor data directly from the SDK after init.' },
+                      { method: 'highlightBooths(ids[])', status: 'opportunity', note: 'Highlight route booths on the live map for visual context.' },
+                      { method: 'setBookmarks(booths[])', status: 'opportunity', note: 'Persist bookmarked booths — useful for the Quest stamp card.' },
+                      { method: 'setVisibility({})', status: 'ready', note: 'Hide SDK chrome (header, controls, overlay) for embedded use.' },
+                      { method: 'onBoothClick(e)', status: 'opportunity', note: 'Interactive selection — tap a booth to add it to your route.' },
+                      { method: 'zoomTo(selectors, options)', status: 'opportunity', note: 'Auto-zoom to the current route for focused navigation.' },
+                      { method: 'findLocation() / blue-dot', status: 'opportunity', note: 'GPS blue-dot with route snapping within 7.5m, auto-reroutes at 10+ units.' },
+                    ].map(({ method, status, note }) => (
+                      <div key={method} className="flex gap-3 items-start">
+                        <span className={`flex-shrink-0 mt-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
+                          status === 'ready'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {status === 'ready' ? 'in use' : 'next'}
+                        </span>
+                        <div>
+                          <code className="text-xs text-foreground">{method}</code>
+                          <p className="text-xs text-muted-foreground mt-0.5">{note}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Route strategies */}
+                <section>
+                  <h3 className="text-base font-semibold text-foreground mb-3">Route Strategies</h3>
+                  <div className="space-y-2">
+                    <div className="p-3 bg-background rounded-lg border border-border">
+                      <p className="font-medium text-foreground">Serpentine</p>
+                      <p className="text-muted-foreground">Row-by-row sweep alternating left-right direction. Minimises backtracking across the whole floor.</p>
+                    </div>
+                    <div className="p-3 bg-background rounded-lg border border-border">
+                      <p className="font-medium text-foreground">Big to Small</p>
+                      <p className="text-muted-foreground">Prioritises larger booths first, then fills in smaller ones. Good for maximising high-value stops early.</p>
+                    </div>
+                    <div className="p-3 bg-background rounded-lg border border-border opacity-60">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-foreground">Quest Mode</p>
+                        <span className="text-xs bg-card border border-border px-1.5 py-0.5 rounded text-muted-foreground">coming soon</span>
+                      </div>
+                      <p className="text-muted-foreground">A curated sequence of booths designated by Atlassian. Complete the full list to claim a Team t-shirt at the Atlassian booth.</p>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Other APIs available */}
+                <section>
+                  <h3 className="text-base font-semibold text-foreground mb-3">Other ExpoFP APIs Available</h3>
+                  <div className="space-y-1 text-muted-foreground">
+                    <p><span className="font-medium text-foreground">Bookmarks URL params</span> — <code className="bg-background px-1 rounded text-xs">?b=exhibitorId</code> pre-bookmarks exhibitors on load.</p>
+                    <p><span className="font-medium text-foreground">Webhooks</span> — ExpoFP can POST to your server on booth_reserved, exhibitor_upserted, etc.</p>
+                    <p><span className="font-medium text-foreground">Offline API</span> — versioned ZIP archives for fully offline kiosk use at <code className="bg-background px-1 rounded text-xs">app.expofp.com/api/v2/expo-offline/{'{expoKey}'}/get-or-create/latest</code>.</p>
+                    <p><span className="font-medium text-foreground">Kiosk mode</span> — set up a physical kiosk using <code className="bg-background px-1 rounded text-xs">?setkiosk</code> in the map URL, with bearing/zoom/position controls.</p>
+                  </div>
+                </section>
+
+                {/* Dev links */}
+                <section className="border-t border-border pt-4">
+                  <h3 className="text-base font-semibold text-foreground mb-2">References</h3>
+                  <ul className="space-y-1">
+                    <li><a href="https://developer.expofp.com/guide/java-script-api-reference" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ExpoFP JS API Reference</a></li>
+                    <li><a href="https://developer.expofp.com/guide/wayfinding-guide" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ExpoFP Wayfinding Guide</a></li>
+                    <li><a href="https://developer.expofp.com/guide/query-parameters" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">ExpoFP Query Parameters</a></li>
+                    <li><a href="https://developer.atlassian.com/platform/marketplace/rest/v4/api-group-app-listing/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Atlassian Marketplace REST API</a></li>
+                    <li className="text-muted-foreground"><code className="bg-background px-1 rounded text-xs">docs/ARCHITECTURE.md</code> and <code className="bg-background px-1 rounded text-xs">docs/DEVELOPMENT.md</code> in this repo</li>
                   </ul>
                 </section>
 
-                <section>
-                  <h3 className="text-lg font-semibold text-foreground mb-3">Route Optimization</h3>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Three strategies for navigating the show:
-                  </p>
-                  <ul className="text-sm space-y-2">
-                    <li className="flex gap-2">
-                      <span className="font-medium text-foreground flex-shrink-0">Serpentine:</span>
-                      <span className="text-muted-foreground">Systematic row-by-row sweep (left→right, then right→left)</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-medium text-foreground flex-shrink-0">Big to Small:</span>
-                      <span className="text-muted-foreground">Large booths first for maximum swag, then smaller ones</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="font-medium text-foreground flex-shrink-0">Quest Mode:</span>
-                      <span className="text-muted-foreground">Curated path from Atlassian • Complete for Team t-shirt (coming soon)</span>
-                    </li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h3 className="text-lg font-semibold text-foreground mb-3">For Developers</h3>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Want to build this yourself? Check out our documentation:
-                  </p>
-                  <ul className="text-sm space-y-1">
-                    <li>
-                      <code className="text-xs bg-background p-1 rounded">docs/ARCHITECTURE.md</code> - System design and data flow
-                    </li>
-                    <li>
-                      <code className="text-xs bg-background p-1 rounded">docs/DEVELOPMENT.md</code> - Implementation guide
-                    </li>
-                    <li>
-                      <a href="https://developer.expofp.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        ExpoFP Developer Docs
-                      </a>
-                    </li>
-                    <li>
-                      <a href="https://developer.atlassian.com/platform/marketplace" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        Atlassian Marketplace API
-                      </a>
-                    </li>
-                  </ul>
-                </section>
               </div>
             </div>
           </div>
@@ -240,7 +272,44 @@ export default function BoothOptimizerPage() {
           <>
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">Interactive Floor Plan</h2>
-              <ExpoFPWayfinding booths={booths} waypointIds={waypointIds} />
+              <ExpoFPWayfinding
+                booths={booths}
+                waypointIds={waypointIds}
+                onBoothClick={(booth) => setSelectedBooth(booth)}
+              />
+
+              {/* Booth detail popover */}
+              {selectedBooth && (
+                <div className="mt-3 p-4 bg-card border border-border rounded-lg flex items-start justify-between gap-4">
+                  <div>
+                    <div className="font-semibold text-foreground">Booth {selectedBooth.id}</div>
+                    {selectedBooth.vendor ? (
+                      <div className="text-sm text-muted-foreground">{selectedBooth.vendor}</div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground italic">Vendor details coming soon — will be joined from Atlassian Marketplace API</div>
+                    )}
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                        selectedBooth.size === 'large' ? 'bg-primary/20 text-primary'
+                        : selectedBooth.size === 'medium' ? 'bg-secondary/20 text-secondary'
+                        : 'bg-muted text-muted-foreground'
+                      }`}>{selectedBooth.size}</span>
+                      <span className="text-xs text-muted-foreground">
+                        Stop #{waypointIds.indexOf(selectedBooth.id) >= 0 ? waypointIds.indexOf(selectedBooth.id) + 1 : 'not in route'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedBooth(null)}
+                    className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Dismiss"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
@@ -249,10 +318,16 @@ export default function BoothOptimizerPage() {
 
                 <div className="p-4 bg-card rounded-lg border border-border">
                   <h3 className="font-semibold text-foreground mb-2">
-                    {strategy === 'serpentine' ? 'Serpentine Route' : strategy === 'big-to-small' ? 'Big to Small' : 'Quest Mode'}
+                    {strategy === 'serpentine' ? 'Serpentine Route'
+                      : strategy === 'big-to-small' ? 'Big to Small'
+                      : strategy === 'expofp' ? 'ExpoFP Optimized'
+                      : 'Quest Mode'}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {strategy === 'serpentine' ? 'Systematic row-by-row sweep.' : strategy === 'big-to-small' ? 'Visit larger booths first for maximum swag.' : 'Complete the quest for a Team t-shirt (coming soon).'}
+                    {strategy === 'serpentine' ? 'Systematic row-by-row sweep.'
+                      : strategy === 'big-to-small' ? 'Visit larger booths first for maximum swag.'
+                      : strategy === 'expofp' ? 'TSP heuristic matching ExpoFP\'s getOptimizedRoutes() — tries every start point and picks the shortest path.'
+                      : 'Complete the quest for a Team t-shirt (coming soon).'}
                   </p>
 
                   <div className="space-y-2">
@@ -260,6 +335,20 @@ export default function BoothOptimizerPage() {
                       <span className="text-xs text-muted-foreground">Total Booths</span>
                       <span className="font-bold text-foreground">{route?.totalBooths || 0}</span>
                     </div>
+                    {offlineUrl && (
+                      <div className="pt-2 border-t border-border">
+                        <a
+                          href={offlineUrl}
+                          download
+                          className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download floor plan (offline)
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
