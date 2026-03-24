@@ -21,14 +21,14 @@ export default function BoothOptimizerPage() {
       try {
         const response = await fetch('https://team26.expofp.com/data/booths.json')
         if (!response.ok) throw new Error('Failed to fetch')
-
+        
         const data = await response.json()
+        
         const boothList: Booth[] = []
-
         for (const level of data.booths) {
           for (const booth of level.booths) {
             const id = booth.id.trim()
-
+            
             if (id === 'Registration') {
               boothList.push({
                 id,
@@ -41,21 +41,23 @@ export default function BoothOptimizerPage() {
               })
               continue
             }
-
-            if (!/^\d+$/.test(id)) continue
-
+            
+            if (!/^\d+$/.test(id)) {
+              continue
+            }
+            
             const rect = booth.rect
             const x = (rect[0] + rect[2]) / 2
             const y = (rect[1] + rect[5]) / 2
             const width = Math.abs(rect[2] - rect[0])
             const height = Math.abs(rect[5] - rect[1])
             const area = width * height
-
+            
             let size: 'small' | 'medium' | 'large' = 'medium'
             if (area > 2000) size = 'large'
             else if (area > 500) size = 'medium'
             else size = 'small'
-
+            
             boothList.push({
               id,
               name: `Booth ${id}`,
@@ -67,7 +69,7 @@ export default function BoothOptimizerPage() {
             })
           }
         }
-
+        
         setBooths(boothList)
       } catch (error) {
         console.error('[v0] Failed to fetch booths:', error)
@@ -105,8 +107,7 @@ export default function BoothOptimizerPage() {
             Team '26 Booth Optimizer
           </h1>
           <p className="text-muted-foreground">
-            Find the most efficient route through all booths. Select a strategy
-            and see your optimized path visualized on the floor plan.
+            Find the most efficient route through all booths. Select a strategy and optimize your conference experience.
           </p>
         </div>
 
@@ -114,18 +115,16 @@ export default function BoothOptimizerPage() {
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Loading booths and floor plan...
-              </p>
+              <p className="text-sm text-muted-foreground">Loading booths and floor plan...</p>
             </div>
           </div>
         ) : (
           <>
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">
-                Floor Plan
+                Interactive Floor Plan
               </h2>
-              <ExpoFPWayfinding booths={booths} waypointIds={waypointIds} autoRoute={true} />
+              <ExpoFPWayfinding booths={booths} waypointIds={waypointIds} />
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
@@ -145,18 +144,16 @@ export default function BoothOptimizerPage() {
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4">
                     {strategy === 'serpentine'
-                      ? 'Systematically sweeps through each row of booths left to right, then right to left.'
+                      ? 'Systematically sweeps through each row of booths left to right, then right to left. Minimizes backtracking for steady coverage.'
                       : strategy === 'big-to-small'
-                        ? 'Prioritizes larger booths first for maximum swag potential.'
-                        : 'Follows Atlassian quest sequence for strategic booth coverage.'}
+                        ? 'Prioritizes larger booths first for maximum swag potential, then fills in the gaps with smaller booths using an optimized path.'
+                        : 'Win a Team t-shirt by visiting the booths on Atlassian\'s curated quest list (coming soon).'}
                   </p>
 
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Total Booths</span>
-                      <span className="font-bold text-foreground">
-                        {route?.totalBooths || 0}
-                      </span>
+                      <span className="font-bold text-foreground">{route?.totalBooths || 0}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Distance</span>
@@ -175,11 +172,15 @@ export default function BoothOptimizerPage() {
               </div>
 
               <div className="lg:col-span-2">
-                <h2 className="text-lg font-semibold text-foreground mb-4">
-                  Booth Sequence
-                </h2>
+                <h2 className="text-lg font-semibold text-foreground mb-4">Booth Sequence</h2>
                 <BoothList route={route} />
               </div>
+            </div>
+
+            <div className="p-6 bg-card rounded-lg border border-border text-center">
+              <p className="text-sm text-muted-foreground">
+                Switch between strategies to compare coverage and efficiency across the floor plan.
+              </p>
             </div>
           </>
         )}
