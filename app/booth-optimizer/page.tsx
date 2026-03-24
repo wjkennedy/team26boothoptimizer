@@ -13,8 +13,20 @@ export default function BoothOptimizerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [waypointIds, setWaypointIds] = useState<string[]>([])
   const [showInfo, setShowInfo] = useState(false)
+  const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null)
+  const [offlineUrl, setOfflineUrl] = useState<string | null>(null)
 
   const { strategy, route, calculateRoute, initializeRoute } = useRouteCalculator({ booths })
+
+  useEffect(() => {
+    // Fetch offline archive URL so users can download the full floor plan for offline use
+    fetch('https://app.expofp.com/api/v2/expo-offline/team26/get/latest')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.fileUrl) setOfflineUrl(data.fileUrl)
+      })
+      .catch(() => {/* offline API is optional */})
+  }, [])
 
   useEffect(() => {
     const fetchBooths = async () => {
@@ -260,7 +272,44 @@ export default function BoothOptimizerPage() {
           <>
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">Interactive Floor Plan</h2>
-              <ExpoFPWayfinding booths={booths} waypointIds={waypointIds} />
+              <ExpoFPWayfinding
+                booths={booths}
+                waypointIds={waypointIds}
+                onBoothClick={(booth) => setSelectedBooth(booth)}
+              />
+
+              {/* Booth detail popover */}
+              {selectedBooth && (
+                <div className="mt-3 p-4 bg-card border border-border rounded-lg flex items-start justify-between gap-4">
+                  <div>
+                    <div className="font-semibold text-foreground">Booth {selectedBooth.id}</div>
+                    {selectedBooth.vendor ? (
+                      <div className="text-sm text-muted-foreground">{selectedBooth.vendor}</div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground italic">Vendor details coming soon — will be joined from Atlassian Marketplace API</div>
+                    )}
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                        selectedBooth.size === 'large' ? 'bg-primary/20 text-primary'
+                        : selectedBooth.size === 'medium' ? 'bg-secondary/20 text-secondary'
+                        : 'bg-muted text-muted-foreground'
+                      }`}>{selectedBooth.size}</span>
+                      <span className="text-xs text-muted-foreground">
+                        Stop #{waypointIds.indexOf(selectedBooth.id) >= 0 ? waypointIds.indexOf(selectedBooth.id) + 1 : 'not in route'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedBooth(null)}
+                    className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Dismiss"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
@@ -269,10 +318,16 @@ export default function BoothOptimizerPage() {
 
                 <div className="p-4 bg-card rounded-lg border border-border">
                   <h3 className="font-semibold text-foreground mb-2">
-                    {strategy === 'serpentine' ? 'Serpentine Route' : strategy === 'big-to-small' ? 'Big to Small' : 'Quest Mode'}
+                    {strategy === 'serpentine' ? 'Serpentine Route'
+                      : strategy === 'big-to-small' ? 'Big to Small'
+                      : strategy === 'expofp' ? 'ExpoFP Optimized'
+                      : 'Quest Mode'}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {strategy === 'serpentine' ? 'Systematic row-by-row sweep.' : strategy === 'big-to-small' ? 'Visit larger booths first for maximum swag.' : 'Complete the quest for a Team t-shirt (coming soon).'}
+                    {strategy === 'serpentine' ? 'Systematic row-by-row sweep.'
+                      : strategy === 'big-to-small' ? 'Visit larger booths first for maximum swag.'
+                      : strategy === 'expofp' ? 'TSP heuristic matching ExpoFP\'s getOptimizedRoutes() — tries every start point and picks the shortest path.'
+                      : 'Complete the quest for a Team t-shirt (coming soon).'}
                   </p>
 
                   <div className="space-y-2">
@@ -280,6 +335,20 @@ export default function BoothOptimizerPage() {
                       <span className="text-xs text-muted-foreground">Total Booths</span>
                       <span className="font-bold text-foreground">{route?.totalBooths || 0}</span>
                     </div>
+                    {offlineUrl && (
+                      <div className="pt-2 border-t border-border">
+                        <a
+                          href={offlineUrl}
+                          download
+                          className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download floor plan (offline)
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

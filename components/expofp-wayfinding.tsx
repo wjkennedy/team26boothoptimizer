@@ -7,6 +7,7 @@ interface ExpoFPWayfindingProps {
   booths?: Booth[]
   waypointIds?: string[]
   autoRoute?: boolean
+  onBoothClick?: (booth: Booth) => void
 }
 
 // Canvas dimensions.
@@ -137,6 +138,7 @@ function drawMap(
 export function ExpoFPWayfinding({
   booths = [],
   waypointIds = [],
+  onBoothClick,
 }: ExpoFPWayfindingProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -153,6 +155,32 @@ export function ExpoFPWayfinding({
     if (!ctx) return
     drawMap(ctx, booths, waypointIds, CANVAS_W, CANVAS_H, scale)
   }, [booths, waypointIds, scale])
+
+  // Hit-test a canvas click against booth positions
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!onBoothClick || booths.length === 0) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    // Scale mouse coords from display size to canvas logical size
+    const scaleX = CANVAS_W / rect.width
+    const scaleY = CANVAS_H / rect.height
+    const mx = (e.clientX - rect.left) * scaleX
+    const my = (e.clientY - rect.top) * scaleY
+
+    for (const b of booths) {
+      const cx = (b.x + scale.offX) * scale.x
+      const cy = (b.y + scale.offY) * scale.y
+      const r = (b.size === 'large' ? 10 : b.size === 'medium' ? 7 : 4) + 4 // generous hit radius
+      const dx = mx - cx
+      const dy = my - cy
+      if (dx * dx + dy * dy <= r * r) {
+        onBoothClick(b)
+        return
+      }
+    }
+  }, [booths, onBoothClick, scale])
 
   // Export at 2× resolution
   const handleExport = useCallback(() => {
@@ -192,8 +220,9 @@ export function ExpoFPWayfinding({
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="w-full"
+          className={`w-full ${onBoothClick ? 'cursor-pointer' : ''}`}
           aria-label="Booth route map"
+          onClick={handleCanvasClick}
         />
       </div>
       <div className="flex items-center justify-between">

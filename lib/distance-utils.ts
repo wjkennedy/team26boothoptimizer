@@ -136,6 +136,35 @@ export function calculateQuestMotivatedRoute(booths: Booth[]): RouteResult {
 }
 
 /**
+ * ExpoFP-style optimized routing: mirrors getOptimizedRoutes() TSP heuristic.
+ * Tries nearest-neighbor starting from every booth and picks the shortest total path.
+ * This is the same approach ExpoFP's SDK uses internally — useful for side-by-side comparison.
+ */
+export function calculateExpofpOptimizedRoute(booths: Booth[]): RouteResult {
+  if (booths.length === 0) {
+    return { route: [], totalDistance: 0, totalBooths: 0, efficiency: 0 }
+  }
+
+  let bestRoute: Booth[] = []
+  let bestDistance = Infinity
+
+  for (let start = 0; start < booths.length; start++) {
+    const ordered = [booths[start], ...booths.filter((_, i) => i !== start)]
+    const candidate = greedyNearestNeighbor(ordered)
+    let dist = 0
+    for (let i = 1; i < candidate.length; i++) {
+      dist += calculateDistance(candidate[i - 1].x, candidate[i - 1].y, candidate[i].x, candidate[i].y)
+    }
+    if (dist < bestDistance) {
+      bestDistance = dist
+      bestRoute = candidate
+    }
+  }
+
+  return buildRoute(bestRoute)
+}
+
+/**
  * Greedy nearest-neighbor algorithm: At each step, visit the closest unvisited booth
  */
 function greedyNearestNeighbor(booths: Booth[]): Booth[] {

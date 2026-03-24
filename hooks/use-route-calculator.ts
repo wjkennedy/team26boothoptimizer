@@ -6,9 +6,10 @@ import {
   calculateSerpentineRoute,
   calculateBigToSmallRoute,
   calculateQuestMotivatedRoute,
+  calculateExpofpOptimizedRoute,
 } from '@/lib/distance-utils'
 
-export type StrategyType = 'serpentine' | 'big-to-small' | 'quest'
+export type StrategyType = 'serpentine' | 'big-to-small' | 'quest' | 'expofp'
 
 interface UseRouteCalculatorProps {
   booths: Booth[]
@@ -31,6 +32,9 @@ export function useRouteCalculator({ booths }: UseRouteCalculatorProps) {
           break
         case 'quest':
           result = calculateQuestMotivatedRoute(booths)
+          break
+        case 'expofp':
+          result = calculateExpofpOptimizedRoute(booths)
           break
         default:
           result = calculateSerpentineRoute(booths)
