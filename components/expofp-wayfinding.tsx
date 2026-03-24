@@ -9,11 +9,13 @@ interface ExpoFPWayfindingProps {
   autoRoute?: boolean
 }
 
-// Base canvas dimensions — labels need ~24px below each circle so PAD_Y is generous
-const CANVAS_W = 900
-const CANVAS_H = 640
-const PAD_X = 60  // enough room for labels that sit near the left/right edges
-const PAD_Y = 60  // enough room for labels that sit near the top/bottom edges
+// Canvas dimensions.
+// PAD accounts for: circle radius (max 10) + badge (9) + ID text (11px) + vendor text (10px)
+// plus generous breathing room so nothing is ever cropped at any edge.
+const CANVAS_W = 1000
+const CANVAS_H = 720
+const PAD_X = 120
+const PAD_Y = 120
 
 function buildScale(
   booths: Booth[],
