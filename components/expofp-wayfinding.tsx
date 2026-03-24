@@ -60,12 +60,28 @@ export function ExpoFPWayfinding({
       ctx.beginPath()
       ctx.arc(x, y, size, 0, Math.PI * 2)
       ctx.fill()
+    })
 
+    // Draw booth labels below circles to avoid overlap
+    booths.forEach(booth => {
+      const x = (booth.x + scale.offsetX) * scale.x
+      const y = (booth.y + scale.offsetY) * scale.y
+      
+      // Booth ID label below the circle
       ctx.fillStyle = '#78716c'
-      ctx.font = '10px sans-serif'
+      ctx.font = '9px sans-serif'
       ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(booth.id, x, y)
+      ctx.textBaseline = 'top'
+      ctx.fillText(booth.id, x, y + 16)
+      
+      // Vendor name label (if available) or placeholder
+      if (booth.vendor) {
+        ctx.fillStyle = '#a8a39d'
+        ctx.font = '8px italic sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'top'
+        ctx.fillText(booth.vendor, x, y + 26)
+      }
     })
 
     // Draw route

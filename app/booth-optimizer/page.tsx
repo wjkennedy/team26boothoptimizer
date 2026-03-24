@@ -13,8 +13,7 @@ export default function BoothOptimizerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [waypointIds, setWaypointIds] = useState<string[]>([])
 
-  const { strategy, route, calculateRoute, initializeRoute } =
-    useRouteCalculator({ booths })
+  const { strategy, route, calculateRoute, initializeRoute } = useRouteCalculator({ booths })
 
   useEffect(() => {
     const fetchBooths = async () => {
@@ -23,8 +22,8 @@ export default function BoothOptimizerPage() {
         if (!response.ok) throw new Error('Failed to fetch')
         
         const data = await response.json()
-        
         const boothList: Booth[] = []
+        
         for (const level of data.booths) {
           for (const booth of level.booths) {
             const id = booth.id.trim()
@@ -42,9 +41,7 @@ export default function BoothOptimizerPage() {
               continue
             }
             
-            if (!/^\d+$/.test(id)) {
-              continue
-            }
+            if (!/^\d+$/.test(id)) continue
             
             const rect = booth.rect
             const x = (rect[0] + rect[2]) / 2
@@ -107,7 +104,7 @@ export default function BoothOptimizerPage() {
             Team '26 Booth Optimizer
           </h1>
           <p className="text-muted-foreground">
-            Find the most efficient route through all booths. Select a strategy and optimize your conference experience.
+            Find the most efficient route through all booths. Select a strategy and see your optimized path.
           </p>
         </div>
 
@@ -115,39 +112,26 @@ export default function BoothOptimizerPage() {
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2" />
-              <p className="text-sm text-muted-foreground">Loading booths and floor plan...</p>
+              <p className="text-sm text-muted-foreground">Loading booths...</p>
             </div>
           </div>
         ) : (
           <>
             <div>
-              <h2 className="text-lg font-semibold text-foreground mb-4">
-                Interactive Floor Plan
-              </h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Interactive Floor Plan</h2>
               <ExpoFPWayfinding booths={booths} waypointIds={waypointIds} />
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
               <div className="lg:col-span-1 space-y-6">
-                <StrategyToggle
-                  activeStrategy={strategy}
-                  onStrategyChange={handleStrategyChange}
-                />
+                <StrategyToggle activeStrategy={strategy} onStrategyChange={handleStrategyChange} />
 
                 <div className="p-4 bg-card rounded-lg border border-border">
                   <h3 className="font-semibold text-foreground mb-2">
-                    {strategy === 'serpentine'
-                      ? 'Serpentine Route'
-                      : strategy === 'big-to-small'
-                        ? 'Big to Small'
-                        : 'Quest Mode'}
+                    {strategy === 'serpentine' ? 'Serpentine Route' : strategy === 'big-to-small' ? 'Big to Small' : 'Quest Mode'}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {strategy === 'serpentine'
-                      ? 'Systematically sweeps through each row of booths left to right, then right to left. Minimizes backtracking for steady coverage.'
-                      : strategy === 'big-to-small'
-                        ? 'Prioritizes larger booths first for maximum swag potential, then fills in the gaps with smaller booths using an optimized path.'
-                        : 'Win a Team t-shirt by visiting the booths on Atlassian\'s curated quest list (coming soon).'}
+                    {strategy === 'serpentine' ? 'Systematic row-by-row sweep.' : strategy === 'big-to-small' ? 'Visit larger booths first for maximum swag.' : 'Complete the quest for a Team t-shirt (coming soon).'}
                   </p>
 
                   <div className="space-y-2">
@@ -157,15 +141,11 @@ export default function BoothOptimizerPage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Distance</span>
-                      <span className="font-bold text-foreground">
-                        {route?.totalDistance ? route.totalDistance.toFixed(0) : '0'} m
-                      </span>
+                      <span className="font-bold text-foreground">{route?.totalDistance ? route.totalDistance.toFixed(0) : '0'} m</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Efficiency</span>
-                      <span className="font-bold text-accent">
-                        {route?.efficiency ? route.efficiency.toFixed(3) : '0'} booths/m
-                      </span>
+                      <span className="font-bold text-accent">{route?.efficiency ? route.efficiency.toFixed(3) : '0'} booths/m</span>
                     </div>
                   </div>
                 </div>
@@ -175,12 +155,6 @@ export default function BoothOptimizerPage() {
                 <h2 className="text-lg font-semibold text-foreground mb-4">Booth Sequence</h2>
                 <BoothList route={route} />
               </div>
-            </div>
-
-            <div className="p-6 bg-card rounded-lg border border-border text-center">
-              <p className="text-sm text-muted-foreground">
-                Switch between strategies to compare coverage and efficiency across the floor plan.
-              </p>
             </div>
           </>
         )}
