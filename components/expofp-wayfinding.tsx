@@ -1,12 +1,12 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { Booth } from '@/lib/distance-utils'
 
 interface ExpoFPWayfindingProps {
   booths?: Booth[]
-  waypointIds?: string[] // Booth IDs showing the route
-  autoRoute?: boolean // Auto-calculate optimized route
+  waypointIds?: string[]
+  autoRoute?: boolean
 }
 
 export function ExpoFPWayfinding({
@@ -14,82 +14,75 @@ export function ExpoFPWayfinding({
   waypointIds = [],
   autoRoute = true,
 }: ExpoFPWayfindingProps) {
-  // Calculate bounds for scaling
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
   const bounds = useMemo(() => {
     if (booths.length === 0) return { minX: 0, maxX: 1000, minY: 0, maxY: 1000 }
-    
-    let minX = Infinity, maxX = -Infinity
-    let minY = Infinity, maxY = -Infinity
-    
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
     booths.forEach(booth => {
       minX = Math.min(minX, booth.x)
       maxX = Math.max(maxX, booth.x)
       minY = Math.min(minY, booth.y)
       maxY = Math.max(maxY, booth.y)
     })
-    
     return { minX, maxX, minY, maxY }
   }, [booths])
 
-  // Scale coordinates to fit in the canvas
   const scale = useMemo(() => {
     const width = bounds.maxX - bounds.minX || 1
     const height = bounds.maxY - bounds.minY || 1
-    const canvasWidth = 800
-    const canvasHeight = 600
-    
     return {
-      x: (canvasWidth * 0.9) / width,
-      y: (canvasHeight * 0.9) / height,
-      offsetX: (canvasWidth * 0.05) + Math.abs(bounds.minX),
-      offsetY: (canvasHeight * 0.05) + Math.abs(bounds.minY),
+      x: 720 / width,
+      y: 540 / height,
+      offsetX: 40 - bounds.minX,
+      offsetY: 30 - bounds.minY,
     }
   }, [bounds])
 
-  // Draw canvas
-  const handleCanvasDraw = (ctx: CanvasRenderingContext2D) => {
-    const canvasWidth = 800
-    const canvasHeight = 600
-    
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
     // Background
     ctx.fillStyle = '#fafaf9'
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight)
-    
-    // Draw all booths
+    ctx.fillRect(0, 0, 800, 600)
+
+    // Draw booths
     booths.forEach(booth => {
       const x = (booth.x + scale.offsetX) * scale.x
       const y = (booth.y + scale.offsetY) * scale.y
       const size = booth.size === 'large' ? 12 : booth.size === 'medium' ? 8 : 5
-      
+
       ctx.fillStyle = '#e7e5e4'
       ctx.beginPath()
       ctx.arc(x, y, size, 0, Math.PI * 2)
       ctx.fill()
-      
-      // Label
+
       ctx.fillStyle = '#78716c'
       ctx.font = '10px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(booth.id, x, y)
     })
-    
-    // Draw route path
+
+    // Draw route
     if (waypointIds.length > 0) {
       const boothMap = new Map(booths.map(b => [b.id, b]))
-      
+
       ctx.strokeStyle = '#0052cc'
       ctx.lineWidth = 2
       ctx.setLineDash([5, 5])
       ctx.beginPath()
-      
+
       let firstPoint = true
       waypointIds.forEach(id => {
         const booth = boothMap.get(id)
         if (booth) {
           const x = (booth.x + scale.offsetX) * scale.x
           const y = (booth.y + scale.offsetY) * scale.y
-          
           if (firstPoint) {
             ctx.moveTo(x, y)
             firstPoint = false
@@ -100,20 +93,19 @@ export function ExpoFPWayfinding({
       })
       ctx.stroke()
       ctx.setLineDash([])
-      
-      // Draw route waypoints
+
+      // Draw waypoints with numbers
       waypointIds.forEach((id, idx) => {
         const booth = boothMap.get(id)
         if (booth) {
           const x = (booth.x + scale.offsetX) * scale.x
           const y = (booth.y + scale.offsetY) * scale.y
-          
+
           ctx.fillStyle = '#0052cc'
           ctx.beginPath()
           ctx.arc(x, y, 6, 0, Math.PI * 2)
           ctx.fill()
-          
-          // Draw stop number
+
           ctx.fillStyle = '#ffffff'
           ctx.font = 'bold 11px sans-serif'
           ctx.textAlign = 'center'
@@ -122,28 +114,21 @@ export function ExpoFPWayfinding({
         }
       })
     }
-    
+
     // Border
     ctx.strokeStyle = '#d6ccc2'
     ctx.lineWidth = 1
-    ctx.strokeRect(0, 0, canvasWidth, canvasHeight)
-  }
+    ctx.strokeRect(0, 0, 800, 600)
+  }, [booths, waypointIds, scale])
 
   return (
     <div className="w-full space-y-4">
       <div className="w-full rounded-lg border border-border overflow-hidden bg-card p-4">
         <canvas
+          ref={canvasRef}
           width={800}
           height={600}
           className="w-full border border-border rounded"
-          ref={canvas => {
-            if (canvas) {
-              const ctx = canvas.getContext('2d')
-              if (ctx) {
-                handleCanvasDraw(ctx)
-              }
-            }
-          }}
         />
       </div>
       <div className="text-xs text-muted-foreground text-center p-2">
