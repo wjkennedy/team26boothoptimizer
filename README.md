@@ -1,19 +1,19 @@
 # Team 26 Booth Optimizer
 
-> Attend Summit with intention. Prioritize the vendors that matter to you. Minimize the foam.
+> Attend Team with intention. Prioritize the vendors that matter to you. Minimize the foam.
 
 ## Why This Exists
 
-Summit is a lot. Between keynotes, breakouts, hands-on labs, networking, swag, quests, raffles, and feedback sessions—there's an invisible tax on your time and attention. Add in the geography of the expo floor, and suddenly you're walking 10,000 steps when you could've walked 3,000.
+Team is a lot. Between keynotes, breakouts, hands-on labs, networking, swag, quests, raffles, and feedback sessions—there's an invisible tax on your time and attention. Add in the geography of the expo floor, and suddenly you're walking 10,000 steps when you could've walked 3,000.
 
-This tool respects your summit attendance.
+This tool respects your Team attendance.
 
 By linking Atlassian Marketplace data with real booth locations, you can:
 - **Discover vendors** in the categories that matter to you (no keyword guessing)
 - **Build a route** that honors your geography and time constraints
 - **Prioritize strategically** rather than reactively wandering
 
-Whether you're flying in or driving down the road, whether this is your first Summit or your tenth, this tool helps you get what you came for—and maybe find something unexpected along the way.
+Whether you're flying in or driving down the road, whether this is your first Team or your tenth, this tool helps you get what you came for—and maybe find something unexpected along the way.
 
 ---
 
@@ -37,7 +37,7 @@ Whether you're flying in or driving down the road, whether this is your first Su
 
 ---
 
-## For Summit Attendees
+## For Team Attendees
 
 1. Open the tool
 2. Browse **Marketplace** to find vendors and apps that align with your interests
@@ -128,7 +128,7 @@ Changes auto-save and hot-reload in the preview.
 
 ## Philosophy
 
-Summit is a sprint. You'll never hit everything. That's okay.
+Team is a sprint. You'll never hit everything. That's okay.
 
 This tool helps you *choose* instead of *wander*. It respects your time, your energy, and your distance. Whether you want to deep-dive into one vendor's ecosystem or sample from five categories, the route is yours.
 
@@ -144,4 +144,4 @@ This repository is linked to a [v0](https://v0.app) project. You can continue de
 
 ---
 
-Have a great Summit!
+Have a great Team!
