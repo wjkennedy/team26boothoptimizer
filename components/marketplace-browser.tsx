@@ -121,10 +121,29 @@ export function MarketplaceBrowser({
   }
 
   const handleCategoryClick = (cat: string) => {
-    setSelectedCategory(cat === selectedCategory ? null : cat)
+    const newCategory = cat === selectedCategory ? null : cat
+    setSelectedCategory(newCategory)
     setQuery('')
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    runSearch('')
+    
+    // Fetch immediately with the new category
+    setIsSearching(true)
+    setError(null)
+    fetchMarketplaceApps({
+      hosting: 'cloud',
+      category: newCategory ? [newCategory] : undefined,
+      limit: 24,
+      offset: 0,
+    })
+      .then(apps => {
+        setResults(apps)
+        setSearched(true)
+      })
+      .catch(() => {
+        setError('Could not reach Marketplace. Check your connection.')
+        setResults([])
+      })
+      .finally(() => setIsSearching(false))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -214,7 +233,7 @@ export function MarketplaceBrowser({
 
       {searched && !isSearching && results.length === 0 && (
         <p className="text-sm text-muted-foreground py-4 text-center">
-          No results for &quot;{query}&quot;.
+          No results {selectedCategory ? `for ${selectedCategory}` : 'found'}.
         </p>
       )}
 
@@ -222,7 +241,7 @@ export function MarketplaceBrowser({
       {results.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
-            {results.length} result{results.length !== 1 ? 's' : ''} for &quot;{query}&quot;
+            {results.length} result{results.length !== 1 ? 's' : ''} {selectedCategory ? `in ${selectedCategory}` : ''}{query ? ` matching "${query}"` : ''}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[580px] overflow-y-auto pr-1">
             {results.map((app) => {
