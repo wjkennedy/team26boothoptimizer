@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Booth } from '@/lib/distance-utils'
 import { fetchMarketplaceApps } from '@/lib/marketplace-api'
 import type { MarketplaceApp } from '@/lib/marketplace-types'
@@ -10,6 +10,16 @@ interface MarketplaceBrowserProps {
   waypointIds: string[]
   onAddBooth?: (boothId: string) => void
 }
+
+const POPULAR_CATEGORIES = [
+  'Development',
+  'Project Management',
+  'Reporting',
+  'Integration',
+  'Automation',
+  'Security',
+  'Agile',
+]
 
 function formatInstalls(n?: number): string {
   if (!n) return ''
@@ -33,42 +43,88 @@ export function MarketplaceBrowser({
   onAddBooth,
 }: MarketplaceBrowserProps) {
   const [query, setQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [results, setResults] = useState<MarketplaceApp[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const runSearch = useCallback(async (q: string) => {
-    if (!q.trim()) {
-      setResults([])
-      setSearched(false)
-      return
+  // Prefetch popular categories on mount
+  useEffect(() => {
+    const prefetch = async () => {
+      try {
+        const apps = await fetchMarketplaceApps({
+          hosting: 'cloud',
+          category: ['Development'],
+          limit: 12,
+          offset: 0,
+        })
+        setResults(apps)
+        setSelectedCategory('Development')
+        setSearched(true)
+      } catch (e) {
+        console.error('[v0] Prefetch failed:', e)
+      }
     }
-    setIsSearching(true)
-    setError(null)
-    try {
-      // fetchMarketplaceApps appends hosting=cloud automatically; we pass
-      // a manual query string by abusing the offset param slot via a direct fetch
-      const url = `https://marketplace.atlassian.com/rest/2/addons?query=${encodeURIComponent(q.trim())}&hosting=cloud&limit=24&offset=0`
-      const res = await fetch(url, { headers: { Accept: 'application/json' } })
-      if (!res.ok) throw new Error(`${res.status}`)
-      const data = await res.json()
-      setResults(data?._embedded?.addons ?? [])
-      setSearched(true)
-    } catch {
-      setError('Could not reach the Marketplace API. Check your connection.')
-      setResults([])
-    } finally {
-      setIsSearching(false)
-    }
+    prefetch()
   }, [])
+
+  const runSearch = useCallback(
+    async (q: string) => {
+      if (!q.trim() && !selectedCategory) {
+        setResults([])
+        setSearched(false)
+        return
+      }
+      setIsSearching(true)
+      setError(null)
+      try {
+        // Use category filter instead of unsupported query param
+        const apps = await fetchMarketplaceApps({
+          hosting: 'cloud',
+          category: selectedCategory ? [selectedCategory] : undefined,
+          limit: 24,
+          offset: 0,
+        })
+        
+        // If there's a query, filter locally by name/vendor/summary
+        if (q.trim()) {
+          const lowerQ = q.toLowerCase()
+          const filtered = apps.filter(
+            app =>
+              app.name.toLowerCase().includes(lowerQ) ||
+              app._embedded?.vendor?.name?.toLowerCase().includes(lowerQ) ||
+              app.summary?.toLowerCase().includes(lowerQ) ||
+              app.tagLine?.toLowerCase().includes(lowerQ)
+          )
+          setResults(filtered)
+        } else {
+          setResults(apps)
+        }
+        setSearched(true)
+      } catch {
+        setError('Could not reach Marketplace. Check your connection.')
+        setResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    },
+    [selectedCategory]
+  )
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setQuery(val)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => runSearch(val), 450)
+    debounceRef.current = setTimeout(() => runSearch(val), 350)
+  }
+
+  const handleCategoryClick = (cat: string) => {
+    setSelectedCategory(cat === selectedCategory ? null : cat)
+    setQuery('')
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    runSearch('')
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -95,8 +151,25 @@ export function MarketplaceBrowser({
       <div>
         <h2 className="text-lg font-semibold text-foreground mb-1">Browse Marketplace Vendors</h2>
         <p className="text-sm text-muted-foreground">
-          Search Atlassian Marketplace to find vendors, then locate their booths on the floor plan.
+          Filter by category or search within results to find vendors exhibiting at Team 26.
         </p>
+      </div>
+
+      {/* Category pills */}
+      <div className="flex flex-wrap gap-1.5">
+        {POPULAR_CATEGORIES.map(cat => (
+          <button
+            key={cat}
+            onClick={() => handleCategoryClick(cat)}
+            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all ${
+              selectedCategory === cat
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
       {/* Search bar */}
@@ -112,10 +185,9 @@ export function MarketplaceBrowser({
             type="search"
             value={query}
             onChange={handleInput}
-            placeholder="Search by app name, vendor, or category..."
+            placeholder={selectedCategory ? `Search within ${selectedCategory}...` : 'Search by app or vendor name...'}
             className="w-full pl-9 pr-4 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
             aria-label="Search Marketplace"
-            autoFocus
           />
         </div>
         <button
@@ -270,10 +342,9 @@ export function MarketplaceBrowser({
       {!searched && !isSearching && (
         <div className="text-center py-12 text-muted-foreground">
           <svg className="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
           </svg>
-          <p className="text-sm">Search for a vendor or app to find their booth</p>
-          <p className="text-xs mt-1 opacity-60">Try &quot;ScriptRunner&quot;, &quot;Jira&quot;, or &quot;project management&quot;</p>
+          <p className="text-sm">Select a category or search to get started</p>
         </div>
       )}
     </div>
