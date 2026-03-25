@@ -1,4 +1,4 @@
-import type { MarketplaceApp, MarketplaceResponse, FetchAppsParams } from "./marketplace-types"
+import type { MarketplaceApp, MarketplaceResponse, FetchAppsParams } from "./types"
 
 const MARKETPLACE_API_BASE = "https://marketplace.atlassian.com/rest/2"
 
@@ -19,9 +19,13 @@ export async function fetchMarketplaceApps(params: FetchAppsParams = {}): Promis
 
   const url = `${MARKETPLACE_API_BASE}/addons?${queryParams.toString()}`
 
+  console.log("[v0] Fetching from:", url)
+
   try {
     const response = await fetch(url, {
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+      },
     })
 
     if (!response.ok) {
@@ -29,8 +33,11 @@ export async function fetchMarketplaceApps(params: FetchAppsParams = {}): Promis
     }
 
     const data: MarketplaceResponse = await response.json()
+    console.log("[v0] Fetched apps:", data._embedded.addons.length)
+
     return data._embedded.addons
   } catch (error) {
+    console.error("[v0] Error fetching marketplace apps:", error)
     throw error
   }
 }
