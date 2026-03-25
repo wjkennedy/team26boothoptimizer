@@ -106,6 +106,7 @@ export function MarketplaceBrowser({
           <div className="text-center">
             <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Loading marketplace data...</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">This fetches live data from the Atlassian Marketplace (may take 10-20 seconds)</p>
           </div>
         </div>
       ) : (
