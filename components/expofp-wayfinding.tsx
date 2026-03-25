@@ -1,7 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useMemo } from 'react'
+import { useCallback, useEffect, useRef, useMemo, useState } from 'react'
 import { Booth } from '@/lib/distance-utils'
+
+type LayerMode = 'combined' | 'route-only' | 'map-only'
 
 interface ExpoFPWayfindingProps {
   booths?: Booth[]
@@ -48,6 +50,7 @@ function drawMap(
   w: number,
   h: number,
   scale: { x: number; y: number; offX: number; offY: number },
+  layerMode: LayerMode = 'combined',
   dpr = 1,
 ) {
   const toC = (bx: number, by: number) => ({
@@ -63,7 +66,11 @@ function drawMap(
   ctx.fillRect(0, 0, w, h)
 
   // ── All booths ────────────────────────────────────────────────
-  booths.forEach(b => {
+  const boothsToShow = layerMode === 'route-only' 
+    ? booths.filter(b => routeSet.has(b.id))
+    : booths
+
+  boothsToShow.forEach(b => {
     const { cx, cy } = toC(b.x, b.y)
     const r = b.size === 'large' ? 10 : b.size === 'medium' ? 7 : 4
 
@@ -94,7 +101,7 @@ function drawMap(
   })
 
   // ── Route path ────────────────────────────────────────────────
-  if (waypointIds.length > 1) {
+  if (waypointIds.length > 1 && (layerMode === 'combined' || layerMode === 'route-only')) {
     ctx.strokeStyle = '#2563eb'
     ctx.lineWidth = 2
     ctx.setLineDash([6, 5])
@@ -112,22 +119,24 @@ function drawMap(
   }
 
   // ── Numbered badges ───────────────────────────────────────────
-  waypointIds.forEach((id, idx) => {
-    const b = boothMap.get(id)
-    if (!b) return
-    const { cx, cy } = toC(b.x, b.y)
+  if (layerMode === 'combined' || layerMode === 'route-only') {
+    waypointIds.forEach((id, idx) => {
+      const b = boothMap.get(id)
+      if (!b) return
+      const { cx, cy } = toC(b.x, b.y)
 
-    ctx.fillStyle = '#1d4ed8'
-    ctx.beginPath()
-    ctx.arc(cx, cy, 9, 0, Math.PI * 2)
-    ctx.fill()
+      ctx.fillStyle = '#1d4ed8'
+      ctx.beginPath()
+      ctx.arc(cx, cy, 9, 0, Math.PI * 2)
+      ctx.fill()
 
-    ctx.fillStyle = '#ffffff'
-    ctx.font = `bold ${idx + 1 > 9 ? 7 : 8}px ui-sans-serif, system-ui, sans-serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(String(idx + 1), cx, cy)
-  })
+      ctx.fillStyle = '#ffffff'
+      ctx.font = `bold ${idx + 1 > 9 ? 7 : 8}px ui-sans-serif, system-ui, sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(String(idx + 1), cx, cy)
+    })
+  }
 
   // ── Border ────────────────────────────────────────────────────
   ctx.strokeStyle = '#e7e5e4'
@@ -141,6 +150,7 @@ export function ExpoFPWayfinding({
   onBoothClick,
 }: ExpoFPWayfindingProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [layerMode, setLayerMode] = useState<LayerMode>('combined')
 
   const scale = useMemo(
     () => buildScale(booths, CANVAS_W, CANVAS_H, PAD_X, PAD_Y),
@@ -153,8 +163,8 @@ export function ExpoFPWayfinding({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    drawMap(ctx, booths, waypointIds, CANVAS_W, CANVAS_H, scale)
-  }, [booths, waypointIds, scale])
+    drawMap(ctx, booths, waypointIds, CANVAS_W, CANVAS_H, scale, layerMode)
+  }, [booths, waypointIds, scale, layerMode])
 
   // Hit-test a canvas click against booth positions
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -200,7 +210,8 @@ export function ExpoFPWayfinding({
 
     // Build scale at export dimensions with matching padding
     const exportScale = buildScale(booths, CANVAS_W, CANVAS_H, PAD_X, PAD_Y)
-    drawMap(ctx, booths, waypointIds, CANVAS_W, CANVAS_H, exportScale, DPR)
+    // Always export combined view
+    drawMap(ctx, booths, waypointIds, CANVAS_W, CANVAS_H, exportScale, 'combined', DPR)
 
     offscreen.toBlob(blob => {
       if (!blob) return
@@ -214,7 +225,31 @@ export function ExpoFPWayfinding({
   }, [booths, waypointIds, scale])
 
   return (
-    <div className="w-full space-y-2">
+    <div className="w-full space-y-3">
+      {/* Layer selector */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-medium text-muted-foreground">Layer:</span>
+        <div className="flex gap-1 p-1 bg-muted rounded-lg">
+          {[
+            { mode: 'combined' as LayerMode, label: 'Full Map + Route' },
+            { mode: 'route-only' as LayerMode, label: 'Route Only' },
+            { mode: 'map-only' as LayerMode, label: 'Map Only' },
+          ].map(({ mode, label }) => (
+            <button
+              key={mode}
+              onClick={() => setLayerMode(mode)}
+              className={`px-2.5 py-1 text-xs font-medium rounded transition-all ${
+                layerMode === mode
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card/50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="w-full rounded-lg border border-border overflow-hidden bg-card">
         <canvas
           ref={canvasRef}
