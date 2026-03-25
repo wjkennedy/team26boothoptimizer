@@ -2,17 +2,8 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { Booth } from '@/lib/distance-utils'
-
-interface MarketplaceResult {
-  appKey: string
-  name: string
-  summary: string
-  vendorName: string
-  vendorId: string
-  logoUrl?: string
-  marketplaceUrl: string
-  categories: string[]
-}
+import { fetchMarketplaceApps } from '@/lib/marketplace-api'
+import type { MarketplaceApp } from '@/lib/marketplace-types'
 
 interface MarketplaceBrowserProps {
   booths: Booth[]
@@ -20,26 +11,20 @@ interface MarketplaceBrowserProps {
   onAddBooth?: (boothId: string) => void
 }
 
-// Atlassian Marketplace public search — no auth required for public listings
-async function searchMarketplace(query: string): Promise<MarketplaceResult[]> {
-  const url = `https://marketplace.atlassian.com/rest/2/addons?query=${encodeURIComponent(query)}&limit=20&offset=0`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Marketplace search failed: ${res.status}`)
-  const data = await res.json()
-  const addons = data?._embedded?.addons ?? []
+function formatInstalls(n?: number): string {
+  if (!n) return ''
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M installs`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k installs`
+  return `${n} installs`
+}
 
-  return addons.map((addon: any) => ({
-    appKey: addon.key ?? '',
-    name: addon.name ?? '',
-    summary: addon.summary ?? '',
-    vendorName: addon._embedded?.vendor?.name ?? '',
-    vendorId: addon._embedded?.vendor?.id ?? '',
-    logoUrl: addon._links?.logo?.href ?? undefined,
-    marketplaceUrl: addon._links?.self?.href
-      ? `https://marketplace.atlassian.com/apps/${addon.key}`
-      : '',
-    categories: (addon._embedded?.categories ?? []).map((c: any) => c.name),
-  }))
+function formatPrice(app: MarketplaceApp): string {
+  const pricing = app._embedded?.pricing
+  if (!pricing) return ''
+  if (pricing.isFree !== false) return 'Free'
+  const monthly = pricing.pricing?.cloudMonthly
+  if (monthly) return `$${monthly}/mo`
+  return 'Paid'
 }
 
 export function MarketplaceBrowser({
@@ -48,7 +33,7 @@ export function MarketplaceBrowser({
   onAddBooth,
 }: MarketplaceBrowserProps) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<MarketplaceResult[]>([])
+  const [results, setResults] = useState<MarketplaceApp[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
@@ -63,11 +48,16 @@ export function MarketplaceBrowser({
     setIsSearching(true)
     setError(null)
     try {
-      const res = await searchMarketplace(q.trim())
-      setResults(res)
+      // fetchMarketplaceApps appends hosting=cloud automatically; we pass
+      // a manual query string by abusing the offset param slot via a direct fetch
+      const url = `https://marketplace.atlassian.com/rest/2/addons?query=${encodeURIComponent(q.trim())}&hosting=cloud&limit=24&offset=0`
+      const res = await fetch(url, { headers: { Accept: 'application/json' } })
+      if (!res.ok) throw new Error(`${res.status}`)
+      const data = await res.json()
+      setResults(data?._embedded?.addons ?? [])
       setSearched(true)
-    } catch (e: any) {
-      setError('Could not reach Marketplace API. Check your connection.')
+    } catch {
+      setError('Could not reach the Marketplace API. Check your connection.')
       setResults([])
     } finally {
       setIsSearching(false)
@@ -87,12 +77,17 @@ export function MarketplaceBrowser({
     runSearch(query)
   }
 
-  // Try to match a result to a booth by vendor name
-  const findBoothForVendor = (vendorName: string): Booth | undefined => {
-    const lower = vendorName.toLowerCase()
-    return booths.find(
-      b => b.vendor && b.vendor.toLowerCase().includes(lower)
-    )
+  // Fuzzy-match vendor name to booth
+  const findBoothForApp = (app: MarketplaceApp): Booth | undefined => {
+    const vendorName = app._embedded?.vendor?.name ?? ''
+    const appName = app.name ?? ''
+    return booths.find(b => {
+      if (!b.vendor) return false
+      const bv = b.vendor.toLowerCase()
+      return bv.includes(vendorName.toLowerCase()) ||
+        vendorName.toLowerCase().includes(bv) ||
+        bv.includes(appName.toLowerCase())
+    })
   }
 
   return (
@@ -120,6 +115,7 @@ export function MarketplaceBrowser({
             placeholder="Search by app name, vendor, or category..."
             className="w-full pl-9 pr-4 py-2 text-sm bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
             aria-label="Search Marketplace"
+            autoFocus
           />
         </div>
         <button
@@ -145,107 +141,123 @@ export function MarketplaceBrowser({
       )}
 
       {searched && !isSearching && results.length === 0 && (
-        <div className="text-sm text-muted-foreground py-4 text-center">
-          No results found for &quot;{query}&quot;.
-        </div>
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          No results for &quot;{query}&quot;.
+        </p>
       )}
 
       {/* Results */}
       {results.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">{results.length} result{results.length !== 1 ? 's' : ''} for &quot;{query}&quot;</p>
-          <div className="space-y-2 max-h-[540px] overflow-y-auto pr-1">
+          <p className="text-xs text-muted-foreground">
+            {results.length} result{results.length !== 1 ? 's' : ''} for &quot;{query}&quot;
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[580px] overflow-y-auto pr-1">
             {results.map((app) => {
-              const matchedBooth = findBoothForVendor(app.vendorName || app.name)
+              const vendorName = app._embedded?.vendor?.name ?? ''
+              const categories = (app._embedded?.categories ?? []).map(c => c.name)
+              const rating = app._embedded?.distribution?.averageRating
+              const installs = app._embedded?.distribution?.totalInstalls
+              const isVerified = app._embedded?.vendor?.verifiedStatus === 'verified'
+              const isAtlassian = app._embedded?.vendor?.isAtlassian ?? false
+              const price = formatPrice(app)
+              const matchedBooth = findBoothForApp(app)
               const inRoute = matchedBooth ? waypointIds.includes(matchedBooth.id) : false
+              const marketplaceUrl = `https://marketplace.atlassian.com/apps/${app.key}`
 
               return (
                 <div
-                  key={app.appKey}
-                  className="p-3 bg-card border border-border rounded-lg hover:border-primary/30 transition-colors"
+                  key={app.key}
+                  className="p-3 bg-card border border-border rounded-lg hover:border-primary/30 transition-colors flex flex-col gap-2"
                 >
                   <div className="flex items-start gap-3">
-                    {/* Logo */}
-                    <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center overflow-hidden">
-                      {app.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={app.logoUrl}
-                          alt={`${app.name} logo`}
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            const target = e.currentTarget
-                            target.style.display = 'none'
-                            const parent = target.parentElement
-                            if (parent) parent.innerHTML = '<span class="text-xl" aria-hidden="true">🧩</span>'
-                          }}
-                        />
-                      ) : (
-                        <span className="text-xl" aria-hidden="true">🧩</span>
-                      )}
+                    {/* Icon */}
+                    <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xl select-none">
+                      🧩
                     </div>
 
-                    {/* Info */}
+                    {/* Name + vendor */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <a
-                            href={app.marketplaceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium text-sm text-foreground hover:text-primary transition-colors"
-                          >
-                            {app.name}
-                          </a>
-                          {app.vendorName && (
-                            <div className="text-xs text-muted-foreground">{app.vendorName}</div>
-                          )}
-                        </div>
-
-                        {/* Booth match action */}
-                        {matchedBooth ? (
-                          <div className="flex-shrink-0 flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Booth {matchedBooth.id}</span>
-                            {onAddBooth && (
-                              <button
-                                onClick={() => onAddBooth(matchedBooth.id)}
-                                disabled={inRoute}
-                                className={`text-xs font-medium px-2 py-1 rounded transition-colors ${
-                                  inRoute
-                                    ? 'bg-primary/20 text-primary cursor-default'
-                                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
-                                }`}
-                              >
-                                {inRoute ? 'In route' : 'Add to route'}
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="flex-shrink-0 text-xs text-muted-foreground/50 italic">
-                            booth TBD
+                      <div className="flex items-start gap-1 flex-wrap">
+                        <a
+                          href={marketplaceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-sm text-foreground hover:text-primary transition-colors leading-tight"
+                        >
+                          {app.name}
+                        </a>
+                        {isAtlassian && (
+                          <span className="text-[10px] font-semibold px-1 py-0.5 rounded bg-primary/15 text-primary leading-none">
+                            Atlassian
+                          </span>
+                        )}
+                        {isVerified && !isAtlassian && (
+                          <span className="text-[10px] font-medium px-1 py-0.5 rounded bg-muted text-muted-foreground leading-none">
+                            verified
                           </span>
                         )}
                       </div>
-
-                      {app.summary && (
-                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
-                          {app.summary}
-                        </p>
-                      )}
-
-                      {app.categories.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {app.categories.slice(0, 3).map(cat => (
-                            <span
-                              key={cat}
-                              className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded"
-                            >
-                              {cat}
-                            </span>
-                          ))}
-                        </div>
+                      {vendorName && (
+                        <div className="text-xs text-muted-foreground truncate">{vendorName}</div>
                       )}
                     </div>
+                  </div>
+
+                  {/* Summary */}
+                  {(app.tagLine ?? app.summary) && (
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {app.tagLine ?? app.summary}
+                    </p>
+                  )}
+
+                  {/* Meta row */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {rating != null && rating > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {rating.toFixed(1)} ★
+                      </span>
+                    )}
+                    {installs != null && installs > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {formatInstalls(installs)}
+                      </span>
+                    )}
+                    {price && (
+                      <span className="text-xs text-muted-foreground">{price}</span>
+                    )}
+                    {categories.slice(0, 2).map(cat => (
+                      <span
+                        key={cat}
+                        className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded"
+                      >
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Booth match */}
+                  <div className="flex items-center justify-between pt-1 border-t border-border">
+                    {matchedBooth ? (
+                      <>
+                        <span className="text-xs text-muted-foreground">Booth {matchedBooth.id}</span>
+                        {onAddBooth && (
+                          <button
+                            onClick={() => onAddBooth(matchedBooth.id)}
+                            disabled={inRoute}
+                            className={`text-xs font-medium px-2.5 py-1 rounded transition-colors ${
+                              inRoute
+                                ? 'bg-primary/15 text-primary cursor-default'
+                                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            }`}
+                          >
+                            {inRoute ? 'In route' : 'Add to route'}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">booth not mapped yet</span>
+                    )}
                   </div>
                 </div>
               )
@@ -261,7 +273,7 @@ export function MarketplaceBrowser({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <p className="text-sm">Search for a vendor or app to find their booth</p>
-          <p className="text-xs mt-1 opacity-70">e.g. "Jira", "ScriptRunner", "Atlassian"</p>
+          <p className="text-xs mt-1 opacity-60">Try &quot;ScriptRunner&quot;, &quot;Jira&quot;, or &quot;project management&quot;</p>
         </div>
       )}
     </div>
