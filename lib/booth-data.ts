@@ -22,6 +22,9 @@ export const QUEST_ROUTE_ORDER = [
 
 interface ExpoFPBooth {
   id: string
+  name?: string
+  company?: string
+  vendor?: string
   rect: [number, number, number, number, number, number, number, number]
 }
 
@@ -77,10 +80,14 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
       else if (area > 500) size = 'medium'
       else size = 'small'
 
+      // Extract vendor name from ExpoFP booth data
+      // Try company first, then vendor field, fallback to empty string
+      const vendorName = booth.company ?? booth.vendor ?? ''
+
       booths.push({
         id: booth.id,
-        name: `Booth ${booth.id}`,
-        vendor: '',
+        name: booth.name ?? `Booth ${booth.id}`,
+        vendor: vendorName,
         x,
         y,
         size,
