@@ -55,32 +55,20 @@ interface ExpoFPResponse {
 
 export async function getBoothsFromExpoFP(): Promise<Booth[]> {
   try {
-    const [boothsResponse, exhibitorsResponse] = await Promise.all([
-      fetch(EXPO_DATA_URL),
-      fetch(EXPO_COMPANIES_URL).catch(() => ({ ok: false }))
-    ])
+    const boothsResponse = await fetch(EXPO_DATA_URL)
     
     if (!boothsResponse.ok) {
       throw new Error(`Booths API error: ${boothsResponse.status}`)
     }
     
     const boothData: ExpoFPResponse = await boothsResponse.json()
-    let exhibitorMap: Map<string, string> = new Map()
     
-    // Try to fetch exhibitor data if endpoint is available
-    if (exhibitorsResponse && exhibitorsResponse.ok) {
-      try {
-        const exhibitorData = await exhibitorsResponse.json()
-        exhibitorMap = buildExhibitorMap(exhibitorData)
-        console.log('[v0] Fetched exhibitor data, mapped', exhibitorMap.size, 'booths')
-      } catch (e) {
-        console.warn('[v0] Failed to parse exhibitor data:', e)
-      }
-    } else {
-      console.log('[v0] Exhibitor endpoint not available; proceeding with booth data only')
+    // Log the structure of the first booth to debug what fields are available
+    if (boothData.booths && boothData.booths[0] && boothData.booths[0].booths && boothData.booths[0].booths[0]) {
+      console.log('[v0] Sample booth structure:', JSON.stringify(boothData.booths[0].booths[0], null, 2))
     }
     
-    return transformExpoFPData(boothData, exhibitorMap)
+    return transformExpoFPData(boothData)
   } catch (error) {
     console.error('[v0] Failed to fetch booths:', error)
     return getMockBooths()
@@ -111,7 +99,7 @@ function buildExhibitorMap(exhibitorData: any): Map<string, string> {
   return map
 }
 
-function transformExpoFPData(data: ExpoFPResponse, exhibitorMap: Map<string, string> = new Map()): Booth[] {
+function transformExpoFPData(data: ExpoFPResponse): Booth[] {
   const booths: Booth[] = []
   let boothsWithVendor = 0
   
@@ -135,11 +123,8 @@ function transformExpoFPData(data: ExpoFPResponse, exhibitorMap: Map<string, str
       else if (area > 500) size = 'medium'
       else size = 'small'
 
-      // Get vendor name from exhibitor map first, then fallback to booth data
-      let vendorName = exhibitorMap.get(booth.id) || ''
-      if (!vendorName) {
-        vendorName = booth.company ?? booth.vendor ?? ''
-      }
+      // Extract vendor name from booth data - try company or vendor fields
+      const vendorName = booth.company ?? booth.vendor ?? ''
       
       if (vendorName) boothsWithVendor++
 
