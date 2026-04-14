@@ -2,6 +2,7 @@ import { Booth } from '@/lib/distance-utils'
 
 // ExpoFP API configuration for Team 26 event - Public endpoint, no auth needed
 const EXPO_DATA_URL = 'https://team26.expofp.com/data/booths.json'
+const EXPO_COMPANIES_URL = 'https://team26.expofp.com/api/v2/exhibitor/getList'
 
 // Curated Quest Route for Team 26
 export const QUEST_ROUTE_ORDER = [
@@ -19,6 +20,15 @@ export const QUEST_ROUTE_ORDER = [
   '2669', '2672', '2713', '2735', '2744', '2766', '2769', '2815', '2850',
   '2856', '2938', '2954', '2959', '3221', '3246',
 ]
+
+interface ExpoFPExhibitor {
+  id: string
+  boothId?: string
+  booth_id?: string
+  name?: string
+  company?: string
+  [key: string]: any
+}
 
 interface ExpoFPBooth {
   id: string
@@ -45,20 +55,65 @@ interface ExpoFPResponse {
 
 export async function getBoothsFromExpoFP(): Promise<Booth[]> {
   try {
-    const response = await fetch(EXPO_DATA_URL)
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
+    const [boothsResponse, exhibitorsResponse] = await Promise.all([
+      fetch(EXPO_DATA_URL),
+      fetch(EXPO_COMPANIES_URL).catch(() => ({ ok: false }))
+    ])
+    
+    if (!boothsResponse.ok) {
+      throw new Error(`Booths API error: ${boothsResponse.status}`)
     }
-    const data: ExpoFPResponse = await response.json()
-    return transformExpoFPData(data)
+    
+    const boothData: ExpoFPResponse = await boothsResponse.json()
+    let exhibitorMap: Map<string, string> = new Map()
+    
+    // Try to fetch exhibitor data if endpoint is available
+    if (exhibitorsResponse && exhibitorsResponse.ok) {
+      try {
+        const exhibitorData = await exhibitorsResponse.json()
+        exhibitorMap = buildExhibitorMap(exhibitorData)
+        console.log('[v0] Fetched exhibitor data, mapped', exhibitorMap.size, 'booths')
+      } catch (e) {
+        console.warn('[v0] Failed to parse exhibitor data:', e)
+      }
+    } else {
+      console.log('[v0] Exhibitor endpoint not available; proceeding with booth data only')
+    }
+    
+    return transformExpoFPData(boothData, exhibitorMap)
   } catch (error) {
     console.error('[v0] Failed to fetch booths:', error)
     return getMockBooths()
   }
 }
 
-function transformExpoFPData(data: ExpoFPResponse): Booth[] {
+function buildExhibitorMap(exhibitorData: any): Map<string, string> {
+  const map = new Map<string, string>()
+  
+  if (Array.isArray(exhibitorData)) {
+    exhibitorData.forEach((ex: ExpoFPExhibitor) => {
+      const boothId = ex.boothId ?? ex.booth_id ?? ex.id
+      const company = ex.company ?? ex.name ?? ''
+      if (boothId && company) {
+        map.set(String(boothId), company)
+      }
+    })
+  } else if (exhibitorData?.data && Array.isArray(exhibitorData.data)) {
+    exhibitorData.data.forEach((ex: ExpoFPExhibitor) => {
+      const boothId = ex.boothId ?? ex.booth_id ?? ex.id
+      const company = ex.company ?? ex.name ?? ''
+      if (boothId && company) {
+        map.set(String(boothId), company)
+      }
+    })
+  }
+  
+  return map
+}
+
+function transformExpoFPData(data: ExpoFPResponse, exhibitorMap: Map<string, string> = new Map()): Booth[] {
   const booths: Booth[] = []
+  let boothsWithVendor = 0
   
   for (const level of data.booths) {
     for (const booth of level.booths) {
@@ -80,9 +135,13 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
       else if (area > 500) size = 'medium'
       else size = 'small'
 
-      // Extract vendor name from ExpoFP booth data
-      // Try company first, then vendor field, fallback to empty string
-      const vendorName = booth.company ?? booth.vendor ?? ''
+      // Get vendor name from exhibitor map first, then fallback to booth data
+      let vendorName = exhibitorMap.get(booth.id) || ''
+      if (!vendorName) {
+        vendorName = booth.company ?? booth.vendor ?? ''
+      }
+      
+      if (vendorName) boothsWithVendor++
 
       booths.push({
         id: booth.id,
@@ -94,6 +153,11 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
         externalId: booth.id,
       })
     }
+  }
+
+  console.log('[v0] Loaded', booths.length, 'booths,', boothsWithVendor, 'with vendor data')
+  if (boothsWithVendor === 0 && booths.length > 0) {
+    console.log('[v0] Sample booth:', booths[0])
   }
 
   return booths
