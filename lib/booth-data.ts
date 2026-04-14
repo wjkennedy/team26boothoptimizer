@@ -1,4 +1,5 @@
 import { Booth } from '@/lib/distance-utils'
+import { boothVendorMap } from '@/lib/booth-vendor-map'
 
 // ExpoFP API configuration for Team 26 event - Public endpoint, no auth needed
 const EXPO_DATA_URL = 'https://team26.expofp.com/data/booths.json'
@@ -62,12 +63,6 @@ export async function getBoothsFromExpoFP(): Promise<Booth[]> {
     }
     
     const boothData: ExpoFPResponse = await boothsResponse.json()
-    
-    // Log the structure of the first booth to debug what fields are available
-    if (boothData.booths && boothData.booths[0] && boothData.booths[0].booths && boothData.booths[0].booths[0]) {
-      console.log('[v0] Sample booth structure:', JSON.stringify(boothData.booths[0].booths[0], null, 2))
-    }
-    
     return transformExpoFPData(boothData)
   } catch (error) {
     console.error('[v0] Failed to fetch booths:', error)
@@ -123,8 +118,8 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
       else if (area > 500) size = 'medium'
       else size = 'small'
 
-      // Extract vendor name from booth data - try company or vendor fields
-      const vendorName = booth.company ?? booth.vendor ?? ''
+      // Get vendor from manual map (populated as ExpoFP data becomes available)
+      const vendorName = boothVendorMap[booth.id] ?? ''
       
       if (vendorName) boothsWithVendor++
 
@@ -140,10 +135,7 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
     }
   }
 
-  console.log('[v0] Loaded', booths.length, 'booths,', boothsWithVendor, 'with vendor data')
-  if (boothsWithVendor === 0 && booths.length > 0) {
-    console.log('[v0] Sample booth:', booths[0])
-  }
+  console.log('[v0] Loaded', booths.length, 'booths,', boothsWithVendor, 'with vendor data from map')
 
   return booths
 }
