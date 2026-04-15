@@ -26,6 +26,14 @@ export default function BoothOptimizerPage() {
   const { strategy, route, calculateRoute, initializeRoute } = useRouteCalculator({ booths: hideUnlabeled ? booths.filter(b => b.vendor) : booths })
 
   useEffect(() => {
+    // Recalculate route when hideUnlabeled changes
+    if (booths.length > 0) {
+      const filteredBooths = hideUnlabeled ? booths.filter(b => b.vendor) : booths
+      calculateRoute(strategy, filteredBooths)
+    }
+  }, [hideUnlabeled, strategy, booths, calculateRoute])
+
+  useEffect(() => {
     // Fetch offline archive URL so users can download the full floor plan for offline use
     fetch('https://app.expofp.com/api/v2/expo-offline/team26/get/latest')
       .then(r => r.json())

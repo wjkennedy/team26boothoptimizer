@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Booth } from '@/lib/distance-utils'
 import { fetchAllMarketplaceApps } from '@/lib/marketplace-api'
 import type { MarketplaceApp } from '@/lib/marketplace-types'
+import { findBestVendorMatch } from '@/lib/vendor-matching'
 
 interface MarketplaceBrowserProps {
   booths: Booth[]
@@ -73,17 +74,33 @@ export function MarketplaceBrowser({
     return true
   })
 
-  // Find booth matches
+  // Find booth matches using fuzzy vendor matching
   const findBoothForApp = (app: MarketplaceApp): Booth | undefined => {
     const vendorName = app._embedded?.vendor?.name ?? ''
     const appName = app.name ?? ''
-    return booths.find(b => {
-      if (!b.vendor) return false
-      const bv = b.vendor.toLowerCase()
-      return bv.includes(vendorName.toLowerCase()) ||
-        vendorName.toLowerCase().includes(bv) ||
-        bv.includes(appName.toLowerCase())
-    })
+    
+    if (!vendorName && !appName) return undefined
+    
+    // Build list of candidate exhibitor names from booths
+    const boothVendorNames = booths.map(b => b.vendor).filter(Boolean) as string[]
+    
+    // Try to find best match for vendor name
+    if (vendorName) {
+      const match = findBestVendorMatch(vendorName, boothVendorNames, 0.7)
+      if (match) {
+        return booths.find(b => b.vendor === match.name)
+      }
+    }
+    
+    // Fallback to app name matching
+    if (appName) {
+      const match = findBestVendorMatch(appName, boothVendorNames, 0.7)
+      if (match) {
+        return booths.find(b => b.vendor === match.name)
+      }
+    }
+    
+    return undefined
   }
 
   return (
