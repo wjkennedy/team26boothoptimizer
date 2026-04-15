@@ -1,7 +1,9 @@
 import { Booth } from '@/lib/distance-utils'
+import { boothVendorMap } from '@/lib/booth-vendor-map'
 
 // ExpoFP API configuration for Team 26 event - Public endpoint, no auth needed
 const EXPO_DATA_URL = 'https://team26.expofp.com/data/booths.json'
+const EXPO_COMPANIES_URL = 'https://team26.expofp.com/api/v2/exhibitor/getList'
 
 // Curated Quest Route for Team 26
 export const QUEST_ROUTE_ORDER = [
@@ -19,6 +21,15 @@ export const QUEST_ROUTE_ORDER = [
   '2669', '2672', '2713', '2735', '2744', '2766', '2769', '2815', '2850',
   '2856', '2938', '2954', '2959', '3221', '3246',
 ]
+
+interface ExpoFPExhibitor {
+  id: string
+  boothId?: string
+  booth_id?: string
+  name?: string
+  company?: string
+  [key: string]: any
+}
 
 interface ExpoFPBooth {
   id: string
@@ -45,20 +56,47 @@ interface ExpoFPResponse {
 
 export async function getBoothsFromExpoFP(): Promise<Booth[]> {
   try {
-    const response = await fetch(EXPO_DATA_URL)
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
+    const boothsResponse = await fetch(EXPO_DATA_URL)
+    
+    if (!boothsResponse.ok) {
+      throw new Error(`Booths API error: ${boothsResponse.status}`)
     }
-    const data: ExpoFPResponse = await response.json()
-    return transformExpoFPData(data)
+    
+    const boothData: ExpoFPResponse = await boothsResponse.json()
+    return transformExpoFPData(boothData)
   } catch (error) {
     console.error('[v0] Failed to fetch booths:', error)
     return getMockBooths()
   }
 }
 
+function buildExhibitorMap(exhibitorData: any): Map<string, string> {
+  const map = new Map<string, string>()
+  
+  if (Array.isArray(exhibitorData)) {
+    exhibitorData.forEach((ex: ExpoFPExhibitor) => {
+      const boothId = ex.boothId ?? ex.booth_id ?? ex.id
+      const company = ex.company ?? ex.name ?? ''
+      if (boothId && company) {
+        map.set(String(boothId), company)
+      }
+    })
+  } else if (exhibitorData?.data && Array.isArray(exhibitorData.data)) {
+    exhibitorData.data.forEach((ex: ExpoFPExhibitor) => {
+      const boothId = ex.boothId ?? ex.booth_id ?? ex.id
+      const company = ex.company ?? ex.name ?? ''
+      if (boothId && company) {
+        map.set(String(boothId), company)
+      }
+    })
+  }
+  
+  return map
+}
+
 function transformExpoFPData(data: ExpoFPResponse): Booth[] {
   const booths: Booth[] = []
+  let boothsWithVendor = 0
   
   for (const level of data.booths) {
     for (const booth of level.booths) {
@@ -80,9 +118,10 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
       else if (area > 500) size = 'medium'
       else size = 'small'
 
-      // Extract vendor name from ExpoFP booth data
-      // Try company first, then vendor field, fallback to empty string
-      const vendorName = booth.company ?? booth.vendor ?? ''
+      // Get vendor from manual map (populated as ExpoFP data becomes available)
+      const vendorName = boothVendorMap[booth.id] ?? ''
+      
+      if (vendorName) boothsWithVendor++
 
       booths.push({
         id: booth.id,
@@ -95,6 +134,8 @@ function transformExpoFPData(data: ExpoFPResponse): Booth[] {
       })
     }
   }
+
+  console.log('[v0] Loaded', booths.length, 'booths,', boothsWithVendor, 'with vendor data from map')
 
   return booths
 }
