@@ -8,6 +8,8 @@ import { useRouteCalculator } from '@/hooks/use-route-calculator'
 import { getMockBooths } from '@/lib/booth-data'
 import { Booth } from '@/lib/distance-utils'
 import { MarketplaceBrowser } from '@/components/marketplace-browser'
+import { boothVendorMap } from '@/lib/booth-vendor-map'
+import { getExhibitorDescription } from '@/lib/exhibitor-metadata'
 
 type ActiveTab = 'route' | 'vendors'
 
@@ -75,7 +77,8 @@ export default function BoothOptimizerPage() {
             boothList.push({
               id,
               name: `Booth ${id}`,
-              vendor: '',
+              vendor: boothVendorMap[id] ?? '',
+              description: boothVendorMap[id] ? getExhibitorDescription(boothVendorMap[id]) : undefined,
               x,
               y,
               size,

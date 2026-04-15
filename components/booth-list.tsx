@@ -59,9 +59,16 @@ export function BoothList({ route, isLoading = false }: BoothListProps) {
                     Booth {stop.booth.id}
                   </div>
                   {stop.booth.vendor ? (
-                    <div className="text-sm text-muted-foreground">
-                      {stop.booth.vendor}
-                    </div>
+                    <>
+                      <div className="text-sm text-muted-foreground font-medium">
+                        {stop.booth.vendor}
+                      </div>
+                      {stop.booth.description && (
+                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                          {stop.booth.description}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="text-sm text-muted-foreground italic">
                       Vendor details coming soon
