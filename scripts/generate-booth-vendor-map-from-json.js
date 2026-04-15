@@ -5,11 +5,11 @@ const path = require('node:path');
 
 async function main() {
   try {
-    // The normalized JSON data is embedded in the file
-    const normalizedDataPath = path.resolve(__dirname, '../user_read_only_context/text_attachments/team26.normalized-f3d0C.json');
+    // Read the normalized JSON data from scripts folder (use absolute path)
+    const dataPath = path.resolve('/vercel/share/v0-project/scripts', 'team26-normalized.json');
     
-    console.log('[v0] Reading normalized booth data...');
-    const rawData = await fs.readFile(normalizedDataPath, 'utf8');
+    console.log('[v0] Reading normalized booth data from:', dataPath);
+    const rawData = await fs.readFile(dataPath, 'utf8');
     const data = JSON.parse(rawData);
 
     if (!data.booths || !Array.isArray(data.booths)) {
@@ -23,7 +23,7 @@ async function main() {
     for (const booth of data.booths) {
       if (!booth.boothNumber) continue;
       
-      // Use the first exhibitor name if available, otherwise skip
+      // Use the first exhibitor name if available
       if (booth.exhibitorNames && booth.exhibitorNames.length > 0) {
         boothVendorMap[booth.boothNumber] = booth.exhibitorNames[0];
         mappedCount++;
@@ -40,9 +40,11 @@ async function main() {
     const projectRoot = path.resolve(__dirname, '..');
     const outputPath = path.join(projectRoot, 'lib', 'booth-vendor-map.ts');
     
-    const content = `// Auto-generated booth-to-vendor mapping from Team 26 normalized data
-// Generated: ${new Date().toISOString()}
-// Total booths mapped: ${mappedCount}
+    const content = `/**
+ * Booth-to-vendor mapping for Team 26 expo floor
+ * Auto-generated from normalized ExpoFP data
+ * Maps ${mappedCount} booths to exhibitor/vendor names
+ */
 
 export const boothVendorMap: Record<string, string> = ${JSON.stringify(boothVendorMap, null, 2)};
 `;
