@@ -66,13 +66,18 @@ export function calculateBigToSmallRoute(booths: Booth[]): RouteResult {
     return { route: [], totalDistance: 0, totalBooths: 0, efficiency: 0 }
   }
 
-  const sizeOrder = { large: 0, medium: 1, small: 2 }
-  const sorted = [...booths].sort(
-    (a, b) => sizeOrder[a.size] - sizeOrder[b.size]
-  )
+  // Group booths by size
+  const largeBooths = booths.filter(b => b.size === 'large')
+  const mediumBooths = booths.filter(b => b.size === 'medium')
+  const smallBooths = booths.filter(b => b.size === 'small')
 
-  // Apply nearest-neighbor optimization between booths of same size group
-  const route = greedyNearestNeighbor(sorted)
+  // Optimize each group with nearest-neighbor TSP
+  const optimizedLarge = largeBooths.length > 0 ? greedyNearestNeighbor(largeBooths) : []
+  const optimizedMedium = mediumBooths.length > 0 ? greedyNearestNeighbor(mediumBooths) : []
+  const optimizedSmall = smallBooths.length > 0 ? greedyNearestNeighbor(smallBooths) : []
+
+  // Combine in big-to-small order
+  const route = [...optimizedLarge, ...optimizedMedium, ...optimizedSmall]
   return buildRoute(route)
 }
 
