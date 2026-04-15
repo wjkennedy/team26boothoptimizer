@@ -1,6 +1,8 @@
 'use client'
 
 import { RouteResult } from '@/lib/distance-utils'
+import { getExhibitorLogo } from '@/lib/exhibitor-metadata'
+import Image from 'next/image'
 
 interface BoothListProps {
   route: RouteResult | null
@@ -60,11 +62,26 @@ export function BoothList({ route, isLoading = false }: BoothListProps) {
                   </div>
                   {stop.booth.vendor ? (
                     <>
-                      <div className="text-sm text-muted-foreground font-medium">
-                        {stop.booth.vendor}
+                      {/* Logo and vendor name */}
+                      <div className="flex items-center gap-2 mt-2">
+                        {getExhibitorLogo(stop.booth.vendor) && (
+                          <div className="flex-shrink-0 w-10 h-10 rounded border border-border overflow-hidden bg-background">
+                            <Image
+                              src={`https://team26.expofp.com/${getExhibitorLogo(stop.booth.vendor)}`}
+                              alt={stop.booth.vendor}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-contain p-0.5"
+                            />
+                          </div>
+                        )}
+                        <div className="text-sm text-muted-foreground font-medium">
+                          {stop.booth.vendor}
+                        </div>
                       </div>
+                      {/* Description */}
                       {stop.booth.description && (
-                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        <div className="text-xs text-muted-foreground mt-2 line-clamp-2">
                           {stop.booth.description}
                         </div>
                       )}

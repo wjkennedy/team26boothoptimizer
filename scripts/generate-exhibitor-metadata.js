@@ -5,9 +5,9 @@ const path = require('node:path');
 
 async function main() {
   try {
-    const dataPath = path.join(__dirname, 'team26.exhibitors.raw.json');
+    const dataPath = '/vercel/share/v0-project/scripts/team26.exhibitors.raw.json';
     
-    console.log('[v0] Reading exhibitor data...');
+    console.log('[v0] Reading exhibitor data from:', dataPath);
     const rawData = await fs.readFile(dataPath, 'utf8');
     const exhibitors = JSON.parse(rawData);
 
