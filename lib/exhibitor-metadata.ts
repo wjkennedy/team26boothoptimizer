@@ -10,6 +10,9 @@ export interface ExhibitorMetadata {
   logo: string | null;
 }
 
+// Base URL for exhibitor logos
+const EXHIBITOR_BASE_URL = 'https://team26.expofp.com/data/';
+
 export const exhibitorMetadata: Record<string, ExhibitorMetadata> = {
   "Community": {
     name: "Community",
@@ -131,7 +134,20 @@ export function getExhibitorInfo(externalId: string): ExhibitorMetadata | undefi
 }
 
 /**
- * Get exhibitor logo URL by external ID
+ * Get exhibitor logo URL by external ID with cache-busting version parameter
+ * Constructs full URL: https://team26.expofp.com/data/{logo}?v={version}
+ */
+export function getExhibitorLogoUrl(externalId: string, version?: string): string | null {
+  const info = exhibitorMetadata[externalId];
+  if (!info?.logo) return null;
+  
+  // If no version provided, use current timestamp as version
+  const v = version || Math.floor(Date.now() / 1000).toString();
+  return `${EXHIBITOR_BASE_URL}${info.logo}?v=${v}`;
+}
+
+/**
+ * Get exhibitor logo path without version parameter
  */
 export function getExhibitorLogo(externalId: string): string | null {
   const info = exhibitorMetadata[externalId];
