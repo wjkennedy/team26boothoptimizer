@@ -21,8 +21,9 @@ export default function BoothOptimizerPage() {
   const [selectedBooth, setSelectedBooth] = useState<Booth | null>(null)
   const [offlineUrl, setOfflineUrl] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<ActiveTab>('route')
+  const [hideUnlabeled, setHideUnlabeled] = useState(false)
 
-  const { strategy, route, calculateRoute, initializeRoute } = useRouteCalculator({ booths })
+  const { strategy, route, calculateRoute, initializeRoute } = useRouteCalculator({ booths: hideUnlabeled ? booths.filter(b => b.vendor) : booths })
 
   useEffect(() => {
     // Fetch offline archive URL so users can download the full floor plan for offline use
@@ -353,6 +354,27 @@ export default function BoothOptimizerPage() {
               <div className="lg:col-span-1 space-y-6">
                 <StrategyToggle activeStrategy={strategy} onStrategyChange={handleStrategyChange} />
 
+                {/* Unlabeled booths toggle */}
+                <div className="p-4 bg-card rounded-lg border border-border">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-foreground text-sm">Booth Filtering</h3>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hideUnlabeled}
+                      onChange={(e) => setHideUnlabeled(e.target.checked)}
+                      className="w-4 h-4 rounded border border-border"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Hide unlabeled booths
+                    </span>
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Unlabeled booths are likely conjoined with other vendors or unused.
+                  </p>
+                </div>
+
                 <div className="p-4 bg-card rounded-lg border border-border">
                   <h3 className="font-semibold text-foreground mb-2">
                     {strategy === 'serpentine' ? 'Serpentine Route'
@@ -370,8 +392,14 @@ export default function BoothOptimizerPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Total Booths</span>
-                      <span className="font-bold text-foreground">{route?.totalBooths || 0}</span>
+                      <span className="font-bold text-foreground">{route?.totalBooths || 0} {hideUnlabeled && booths.length > 0 ? `/ ${booths.length}` : ''}</span>
                     </div>
+                    {hideUnlabeled && booths.length > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">Unlabeled hidden</span>
+                        <span className="text-xs text-muted-foreground">{booths.filter(b => !b.vendor).length} booths</span>
+                      </div>
+                    )}
                     {offlineUrl && (
                       <div className="pt-2 border-t border-border">
                         <a
