@@ -66,19 +66,24 @@ export function calculateBigToSmallRoute(booths: Booth[]): RouteResult {
     return { route: [], totalDistance: 0, totalBooths: 0, efficiency: 0 }
   }
 
-  // Group booths by size
-  const largeBooths = booths.filter(b => b.size === 'large')
-  const mediumBooths = booths.filter(b => b.size === 'medium')
-  const smallBooths = booths.filter(b => b.size === 'small')
+  // Sort by booth number (ascending numeric order) within each size group
+  // This preserves booth layout topology and prevents backtracking
+  const sizeOrder = { large: 0, medium: 1, small: 2 }
+  
+  const sorted = [...booths].sort((a, b) => {
+    // First sort by size (large → medium → small)
+    const sizeA = sizeOrder[a.size] ?? 2
+    const sizeB = sizeOrder[b.size] ?? 2
+    if (sizeA !== sizeB) return sizeA - sizeB
+    
+    // Within same size, sort by booth number
+    const numA = parseInt(a.id) || 0
+    const numB = parseInt(b.id) || 0
+    return numA - numB
+  })
 
-  // Optimize each group with nearest-neighbor TSP
-  const optimizedLarge = largeBooths.length > 0 ? greedyNearestNeighbor(largeBooths) : []
-  const optimizedMedium = mediumBooths.length > 0 ? greedyNearestNeighbor(mediumBooths) : []
-  const optimizedSmall = smallBooths.length > 0 ? greedyNearestNeighbor(smallBooths) : []
-
-  // Combine in big-to-small order
-  const route = [...optimizedLarge, ...optimizedMedium, ...optimizedSmall]
-  return buildRoute(route)
+  // No further optimization - preserve the logical topology
+  return buildRoute(sorted)
 }
 
 /**
