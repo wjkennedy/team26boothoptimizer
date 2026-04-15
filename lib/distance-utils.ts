@@ -2,6 +2,7 @@ export interface Booth {
   id: string
   name: string
   vendor: string
+  description?: string
   x: number
   y: number
   size: 'small' | 'medium' | 'large'
