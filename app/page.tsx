@@ -114,13 +114,13 @@ export default function Page() {
         </a>
 
         <a
-          href="/booth-optimizer?tab=marketplace"
+          href="https://a9teamcountdown.vercel.app/booth-optimizer?tab=marketplace"
           className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-card/80 hover:border-primary/50"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m0 0h6m-6-6V3m0 0v3" />
           </svg>
-          <span>Browse Exhibitors&apos; Marketplace</span>
+          <span>See Exhibitors&apos; Marketplace listings</span>
         </a>
 
         <p className="text-xs text-muted-foreground/60 tracking-wide">
