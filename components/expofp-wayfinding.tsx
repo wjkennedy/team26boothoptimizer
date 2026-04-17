@@ -17,8 +17,8 @@ interface ExpoFPWayfindingProps {
 // plus generous breathing room so nothing is ever cropped at any edge.
 const CANVAS_W = 1000
 const CANVAS_H = 720
-const PAD_X = 120
-const PAD_Y = 120
+const PAD_X = 150
+const PAD_Y = 150
 
 function buildScale(
   booths: Booth[],
@@ -82,22 +82,24 @@ function drawMap(
     ctx.fill()
     ctx.stroke()
 
-    // Booth ID
-    ctx.fillStyle = '#78716c'
-    ctx.font = `bold ${8 * dpr}px ui-sans-serif, system-ui, sans-serif`
+    // Booth ID - larger and bolder
+    ctx.fillStyle = '#1f2937'
+    ctx.font = `bold ${10 * dpr}px ui-sans-serif, system-ui, sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
-    ctx.fillText(b.id, cx, cy + r + 3)
+    ctx.fillText(b.id, cx, cy + r + 4)
 
-    // Vendor label
+    // Vendor label - slightly larger with better contrast
     const vendorLabel = b.vendor || 'TBD'
-    ctx.font = `${7 * dpr}px ui-sans-serif, system-ui, sans-serif`
-    const maxW = 54 * dpr
-    const label = ctx.measureText(vendorLabel).width > maxW
-      ? vendorLabel.slice(0, 10) + '\u2026'
-      : vendorLabel
-    ctx.fillStyle = b.vendor ? '#a8a29e' : '#d6d3d1'
-    ctx.fillText(label, cx, cy + r + 13)
+    ctx.font = `500 ${8 * dpr}px ui-sans-serif, system-ui, sans-serif`
+    const maxW = 60 * dpr
+    const metrics = ctx.measureText(vendorLabel)
+    let label = vendorLabel
+    if (metrics.width > maxW) {
+      label = vendorLabel.slice(0, 12) + '\u2026'
+    }
+    ctx.fillStyle = b.vendor ? '#6b7280' : '#d1d5db'
+    ctx.fillText(label, cx, cy + r + 17)
   })
 
   // ── Route path ────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import { Booth } from '@/lib/distance-utils'
 import { fetchAllMarketplaceApps } from '@/lib/marketplace-api'
 import type { MarketplaceApp } from '@/lib/marketplace-types'
 import { findBestVendorMatch } from '@/lib/vendor-matching'
+import Image from 'next/image'
 
 interface MarketplaceBrowserProps {
   booths: Booth[]
@@ -43,7 +44,9 @@ export function MarketplaceBrowser({
     loadApps()
   }, [])
 
-  // Extract unique categories and vendors
+  // Extract unique categories and vendors that have booths
+  const boothVendorNames = booths.map(b => b.vendor).filter(Boolean) as string[]
+  
   const categories = Array.from(
     new Set(
       allApps.flatMap(app => app._embedded?.categories?.map(c => c.name) || [])
@@ -51,8 +54,12 @@ export function MarketplaceBrowser({
   ).sort()
 
   const vendors = Array.from(
-    new Set(allApps.map(app => app._embedded?.vendor?.name).filter(Boolean))
-  ).sort()
+    new Set(
+      allApps
+        .map(app => app._embedded?.vendor?.name)
+        .filter((name) => name && boothVendorNames.some(bn => bn && findBestVendorMatch(name, [bn], 0.7)))
+    )
+  ).sort() as string[]
 
   // Filter apps based on selections
   const filteredApps = allApps.filter(app => {
@@ -252,9 +259,19 @@ export function MarketplaceBrowser({
                       className="p-3 bg-card border border-border rounded-lg hover:border-primary/30 transition-colors flex flex-col gap-2"
                     >
                       <div className="flex items-start gap-3">
-                        {/* Icon */}
-                        <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xl select-none">
-                          🧩
+                        {/* Logo from marketplace or fallback */}
+                        <div className="flex-shrink-0 w-10 h-10 rounded-md bg-muted flex items-center justify-center text-xl select-none overflow-hidden">
+                          {app.logo ? (
+                            <Image
+                              src={app.logo}
+                              alt={app.name}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span>🧩</span>
+                          )}
                         </div>
 
                         {/* Name + vendor */}
@@ -280,7 +297,18 @@ export function MarketplaceBrowser({
                             )}
                           </div>
                           {vendorName && (
-                            <div className="text-xs text-muted-foreground truncate">{vendorName}</div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                              <span className="truncate">{vendorName}</span>
+                              {matchedBooth && (
+                                <a
+                                  href={`#booth-${matchedBooth.id}`}
+                                  className="flex-shrink-0 text-primary hover:underline font-medium"
+                                  title={`Go to booth ${matchedBooth.id}`}
+                                >
+                                  Booth {matchedBooth.id}
+                                </a>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -301,7 +329,7 @@ export function MarketplaceBrowser({
                         )}
                         {installs != null && installs > 0 && (
                           <span className="text-muted-foreground">
-                            {(installs / 1000).toFixed(0)}k installs
+                            {(installs / 100).toFixed(0)}h installs
                           </span>
                         )}
                       </div>

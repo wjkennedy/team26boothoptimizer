@@ -2,6 +2,7 @@ import { CountdownTimer } from "@/components/countdown-timer"
 import { AnimatedParticles } from "@/components/animated-particles"
 import { EventDetails } from "@/components/event-details"
 import { HeroBadge } from "@/components/hero-badge"
+import Link from "next/link"
 
 export default function Page() {
   return (
@@ -44,6 +45,46 @@ export default function Page() {
         <CountdownTimer />
 
         <EventDetails />
+
+        {/* A9 SightGlass Sponsor Section */}
+        <div className="w-full max-w-md mx-auto mt-4">
+          <div className="relative rounded-xl overflow-hidden border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-6 space-y-4 shadow-lg">
+            <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 20% 80%, #3b82f6, transparent 40%)" }} />
+            <div className="relative z-10 space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-foreground mb-1">Powered by A9 SightGlass</h3>
+                <p className="text-sm text-muted-foreground">
+                  AI-powered insights for Atlassian. Get exclusive Team &apos;26 pricing!
+                </p>
+              </div>
+              
+              <div className="bg-background/40 rounded-lg p-3 border border-primary/20">
+                <p className="text-xs text-muted-foreground mb-2">Promo Code:</p>
+                <code className="text-sm font-mono font-bold text-primary bg-background px-3 py-2 rounded inline-block">
+                  NAOV9L
+                </code>
+              </div>
+
+              <div className="flex gap-2">
+                <Link
+                  href="https://marketplace.atlassian.com/apps/3606666578/a9-sightglass?tab=overview"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <span>View A9 SightGlass</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </Link>
+              </div>
+
+              <p className="text-xs text-muted-foreground/70 text-center">
+                Set up your visit with marketplace data courtesy of A9 Consulting Group
+              </p>
+            </div>
+          </div>
+        </div>
 
         <a
           href="/booth-optimizer"

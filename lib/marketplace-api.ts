@@ -1,8 +1,17 @@
 import type { MarketplaceApp, MarketplaceResponse, FetchAppsParams } from "./types"
+import { getFromCache, setInCache, getCacheKey } from "./cache"
 
 const MARKETPLACE_API_BASE = "https://marketplace.atlassian.com/rest/2"
 
 export async function fetchMarketplaceApps(params: FetchAppsParams = {}): Promise<MarketplaceApp[]> {
+  // Check cache first
+  const cacheKey = getCacheKey(params)
+  const cachedData = getFromCache<MarketplaceApp[]>(cacheKey)
+  if (cachedData) {
+    console.log("[v0] Using cached marketplace data for:", cacheKey.substring(0, 50))
+    return cachedData
+  }
+
   const queryParams = new URLSearchParams()
 
   if (params.application) queryParams.append("application", params.application)
@@ -33,9 +42,13 @@ export async function fetchMarketplaceApps(params: FetchAppsParams = {}): Promis
     }
 
     const data: MarketplaceResponse = await response.json()
-    console.log("[v0] Fetched apps:", data._embedded.addons.length)
+    const apps = data._embedded.addons
+    console.log("[v0] Fetched apps:", apps.length)
 
-    return data._embedded.addons
+    // Cache the results
+    setInCache(cacheKey, apps)
+
+    return apps
   } catch (error) {
     console.error("[v0] Error fetching marketplace apps:", error)
     throw error
