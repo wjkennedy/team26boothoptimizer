@@ -2,6 +2,8 @@ import { CountdownTimer } from "@/components/countdown-timer"
 import { AnimatedParticles } from "@/components/animated-particles"
 import { EventDetails } from "@/components/event-details"
 import { HeroBadge } from "@/components/hero-badge"
+import Link from "next/link"
+import Image from "next/image"
 
 export default function Page() {
   return (
@@ -44,6 +46,54 @@ export default function Page() {
         <CountdownTimer />
 
         <EventDetails />
+
+        {/* A9 SightGlass Sponsor Section - Marketplace Style Card */}
+        <div className="w-full max-w-md mx-auto mt-4">
+          <div className="relative overflow-hidden rounded-lg border border-border bg-card p-4 space-y-3 shadow-sm hover:shadow-md transition-shadow">
+            {/* Header with logo */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-foreground">A9 SightGlass</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">AI-Powered Insights for Jira</p>
+              </div>
+              <div className="flex-shrink-0">
+                <Image
+                  src="/a9-logo.png"
+                  alt="A9 SightGlass"
+                  width={40}
+                  height={40}
+                  className="rounded-md"
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm text-foreground/80">
+              Join Marketplace Data with the Team &apos;26 event map sponsored by A9 Consulting Group. Discover powerful analytics for your Atlassian ecosystem.
+            </p>
+
+            {/* Promo code highlight */}
+            <div className="bg-primary/5 rounded-lg p-2.5 border border-primary/20">
+              <div className="text-xs text-muted-foreground mb-1">Exclusive Team &apos;26 Pricing:</div>
+              <code className="text-sm font-mono font-bold text-primary">
+                NAOV9L
+              </code>
+            </div>
+
+            {/* CTA Button */}
+            <Link
+              href="https://marketplace.atlassian.com/apps/3606666578/a9-sightglass?tab=overview"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:bg-primary/90 transition-colors"
+            >
+              <span>View on Marketplace</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </Link>
+          </div>
+        </div>
 
         <a
           href="/booth-optimizer"
