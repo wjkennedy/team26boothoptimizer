@@ -25,6 +25,7 @@ export function MarketplaceBrowser({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedVendor, setSelectedVendor] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [exhibitorsOnly, setExhibitorsOnly] = useState(false)
 
   // Prefetch all marketplace apps on mount
   useEffect(() => {
@@ -63,6 +64,13 @@ export function MarketplaceBrowser({
 
   // Filter apps based on selections
   const filteredApps = allApps.filter(app => {
+    // Exhibitors-only filter
+    if (exhibitorsOnly) {
+      const vendorName = app._embedded?.vendor?.name ?? ''
+      const hasBoothMatch = boothVendorNames.some(bn => bn && findBestVendorMatch(vendorName, [bn], 0.7))
+      if (!hasBoothMatch) return false
+    }
+
     if (selectedCategory) {
       const appCategories = app._embedded?.categories?.map(c => c.name) || []
       if (!appCategories.includes(selectedCategory)) return false
@@ -166,6 +174,23 @@ export function MarketplaceBrowser({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Exhibitors-only toggle */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Filters</label>
+            <label className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 border border-border cursor-pointer hover:bg-muted/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={exhibitorsOnly}
+                onChange={(e) => setExhibitorsOnly(e.target.checked)}
+                className="w-4 h-4 rounded border border-border cursor-pointer"
+              />
+              <span className="text-sm text-foreground font-medium">Exhibitors only</span>
+              <span className="text-xs text-muted-foreground ml-auto">
+                {booths.filter(b => b.vendor).length} booths
+              </span>
+            </label>
           </div>
 
           {/* Vendor filter (if category selected) */}
