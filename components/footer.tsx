@@ -13,7 +13,7 @@ export function Footer() {
             A9 Group, Inc.
           </a>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <a
             href="/booth-optimizer"
@@ -22,12 +22,12 @@ export function Footer() {
             Booth Optimizer
           </a>
           <a
-            href="https://team.atlassian.com"
+            href="https://events.atlassian.com/team"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-foreground transition-colors"
           >
-            Atlassian Team
+            Atlassian Team '26
           </a>
         </div>
       </div>
