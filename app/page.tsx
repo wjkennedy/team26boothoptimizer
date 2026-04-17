@@ -69,14 +69,15 @@ export default function Page() {
 
             {/* Description */}
             <p className="text-sm text-foreground/80">
-              Join Marketplace Data with the Team &apos;26 event map sponsored by A9 Consulting Group. Discover powerful analytics for your Atlassian ecosystem.
+              Join Marketplace Data with the Team &apos;26 event map sponsored by A9 Consulting Group. Powerful analytics for your Atlassian systems.
             </p>
 
-            {/* Promo code highlight */}
-            <div className="bg-primary/5 rounded-lg p-2.5 border border-primary/20">
-              <div className="text-xs text-muted-foreground mb-1">Exclusive Team &apos;26 Pricing:</div>
-              <code className="text-sm font-mono font-bold text-primary">
-                NAOV9L
+            {/* Promo offer */}
+            <div className="bg-primary/5 rounded-lg p-2.5 border border-primary/20 space-y-1">
+              <div className="text-xs font-semibold text-primary">First 25 users get 20% off annual subscription</div>
+              <div className="text-xs text-muted-foreground">Less than $1 per user for even the smallest teams</div>
+              <code className="text-sm font-mono font-bold text-primary block">
+                Code: NAOV9L
               </code>
             </div>
 
@@ -112,10 +113,20 @@ export default function Page() {
           <span className="absolute inset-0 bg-gradient-to-r from-accent via-secondary to-accent bg-[length:200%_100%] opacity-0 transition-opacity group-hover:opacity-100 group-hover:animate-[shimmer_2s_linear_infinite]" />
         </a>
 
+        <a
+          href="/booth-optimizer?tab=marketplace"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-card/80 hover:border-primary/50"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m0 0h6m-6-6V3m0 0v3" />
+          </svg>
+          <span>Browse Exhibitors&apos; Marketplace</span>
+        </a>
+
         <p className="text-xs text-muted-foreground/60 tracking-wide">
           May 5, 2026 &middot; Anaheim Convention Center
         </p>
       </div>
-    </main>
+    </main >
   )
 }
