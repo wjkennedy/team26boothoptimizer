@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { StrategyToggle } from '@/components/strategy-toggle'
 import { BoothList } from '@/components/booth-list'
 import { ExpoFPWayfinding } from '@/components/expofp-wayfinding'
@@ -129,13 +130,22 @@ export default function BoothOptimizerPage() {
     <main className="min-h-screen bg-background px-4 py-8 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-1">
-              Team '26 Booth Optimizer
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Find the most efficient route through all booths, or browse vendors by app.
-            </p>
+          <div className="flex items-start gap-3">
+            <Image
+              src="/favicon.png"
+              alt="A9 SightGlass"
+              width={48}
+              height={48}
+              className="rounded-lg"
+            />
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-1">
+                Team '26 Booth Optimizer
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Find the most efficient route through all booths, or browse vendors by app.
+              </p>
+            </div>
           </div>
           <button
             onClick={() => setShowInfo(!showInfo)}
